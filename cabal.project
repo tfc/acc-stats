@@ -1,0 +1,15 @@
+index-state: 2022-04-15T00:00:00Z
+
+packages:
+  acc-stats-api
+  acc-stats-client
+  acc-stats-server
+  acc-statspage
+  acc-statspage-examples
+
+allow-newer:
+  reflex-dom-core,
+  servant-auth,
+  servant-reflex,
+  servant,
+  reflex,
