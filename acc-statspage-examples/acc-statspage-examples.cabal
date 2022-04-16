@@ -3,41 +3,40 @@ name:               acc-statspage-examples
 version:            0.1.0.0
 synopsis:
 homepage:
-license:            NONE
+license:
 author:             Jacek Galowicz
 maintainer:         jacek@galowicz.de
-
-extra-source-files: 
-  CHANGELOG.md 
+extra-source-files:
+  CHANGELOG.md
   examples/graphics.txt
   examples/physics.txt
   examples/stats.txt
 
 library
-    exposed-modules:  Acc.StatsPage.Examples
-    hs-source-dirs:   src
-    default-language: Haskell2010
-    build-depends:
-        , acc-statspage
-        , base
-        , bytestring
-        , file-embed
+  exposed-modules:  Acc.StatsPage.Examples
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  build-depends:
+    , acc-statspage
+    , base
+    , bytestring
+    , file-embed
 
-    if impl(ghcjs)
-        buildable: False
+  if impl(ghcjs)
+    buildable: False
 
 test-suite acc-statspage-test
-    type:             exitcode-stdio-1.0
-    hs-source-dirs:   unit-test
-    main-is:          Main.hs
-    default-language: Haskell2010
-    ghc-options:      -Wall -Werror -fhide-source-paths
-    build-depends:
-        , acc-statspage
-        , acc-statspage-examples
-        , base
-        , hspec
-        , lens
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   unit-test
+  main-is:          Main.hs
+  default-language: Haskell2010
+  ghc-options:      -Wall -Werror -fhide-source-paths
+  build-depends:
+    , acc-statspage
+    , acc-statspage-examples
+    , base
+    , hspec
+    , lens
 
-    if impl(ghcjs)
-        buildable: False
+  if impl(ghcjs)
+    buildable: False
