@@ -1,9 +1,7 @@
 {-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TypeFamilies      #-}
-{-# LANGUAGE TypeOperators     #-}
 
 import           Acc.Stats.API
 import           Acc.Stats.Server
@@ -44,7 +42,7 @@ businessLogicSpec = around withUserApp $ do
     describe "GET /" $ do
       it "should present an empty TC at the beginning" $ \port -> do
         result <- runClientM listTC (clientEnv port)
-        result `shouldBe` (Right $ HM.empty)
+        result `shouldBe` Right HM.empty
       it "posting of a datapoint should work" $ \port -> do
         (postDataPoint exDP, port) `returns` Right ()
         (listTC, port) `returns` Right (HM.fromList [("Jacek Jonge Jonge", exDP)])

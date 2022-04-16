@@ -36,7 +36,7 @@ withSharedWindowsMapping path bytes f = let
     in bracket
         openPtr
         (unmapViewOfFile . fst)
-        (f)
+        f
 
 main :: IO ()
 main = do

@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Acc.Stats.Server where
 
@@ -39,7 +38,7 @@ getPressures mtc = let
             pp = _dataPhysics dp
             gp = _dataGraphics dp
         in DisplayData
-            { displayPressures = (V.toList $ _physicsPageWheelsPressure pp)
+            { displayPressures = V.toList $ _physicsPageWheelsPressure pp
             , displayFuel = _physicsPageFuel pp
             , displayAbs = _graphicsPageABS gp
             , displayTc = (_graphicsPageTC gp, _graphicsPageTCCut gp)
