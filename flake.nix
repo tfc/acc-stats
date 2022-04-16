@@ -54,6 +54,13 @@
             ${pkgs.haskellPackages.hlint}/bin/hlint ${filteredSrc pkgs} \
               |& tee $out
           '';
+
+          cabal-fmt-check = pkgs.runCommand "cabal-fmt-check" {} ''
+            for f in ${filteredSrc pkgs}/**/*.cabal; do
+              ${pkgs.haskellPackages.cabal-fmt}/bin/cabal-fmt -c $f
+            done
+            touch $out
+          '';
         };
       });
 }
