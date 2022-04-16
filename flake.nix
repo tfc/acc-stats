@@ -9,21 +9,23 @@
   outputs = { self, nixpkgs, flake-utils, haskellNix }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
+        filteredSrc = pkgs: pkgs.lib.sourceByRegex ./. [
+          "^acc-.*"
+          "cabal.project"
+        ];
         projectOverlay = final: prev: {
           acc-stats =
             final.haskell-nix.project' {
-              src = final.lib.sourceByRegex ./. [
-                "^acc-.*"
-                "cabal.project"
-              ];
+              src = filteredSrc final;
               compiler-nix-name = "ghc8107";
               shell.tools = {
-                cabal = { };
-                cabal-fmt = {};
                 haskell-language-server = { };
-                hlint = { };
               };
               shell.buildInputs = with pkgs; [
+                cabal-install
+                haskellPackages.cabal-fmt
+                hlint
+                inotify-tools
                 nixpkgs-fmt
                 statix
               ];
@@ -43,7 +45,15 @@
       in
       pkgs.lib.recursiveUpdate flake {
         defaultPackage = flake.packages."acc-stats-server:exe:acc-stats-server";
-        packages.acc-stats-client-windows =
-          windowsFlake.packages."acc-stats-client:exe:acc-stats-client";
+
+        packages = {
+          acc-stats-client-windows =
+            windowsFlake.packages."acc-stats-client:exe:acc-stats-client";
+
+          hlint-check = pkgs.runCommand "hlint-check" {} ''
+            ${pkgs.haskellPackages.hlint}/bin/hlint ${filteredSrc pkgs} \
+              |& tee $out
+          '';
+        };
       });
 }
