@@ -56,10 +56,9 @@
           '';
 
           cabal-fmt-check = pkgs.runCommand "cabal-fmt-check" {} ''
-            for f in ${filteredSrc pkgs}/**/*.cabal; do
-              ${pkgs.haskellPackages.cabal-fmt}/bin/cabal-fmt -c $f
-            done
-            touch $out
+            ${pkgs.haskellPackages.cabal-fmt}/bin/cabal-fmt \
+              -c ${filteredSrc pkgs}/**/*.cabal \
+              |& tee $out
           '';
         };
       });
