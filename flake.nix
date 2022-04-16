@@ -50,14 +50,19 @@
           acc-stats-client-windows =
             windowsFlake.packages."acc-stats-client:exe:acc-stats-client";
 
+          cabal-fmt-check = pkgs.runCommand "cabal-fmt-check" {} ''
+            ${pkgs.haskellPackages.cabal-fmt}/bin/cabal-fmt \
+              -c ${filteredSrc pkgs}/**/*.cabal \
+              |& tee $out
+          '';
+
           hlint-check = pkgs.runCommand "hlint-check" {} ''
             ${pkgs.haskellPackages.hlint}/bin/hlint ${filteredSrc pkgs} \
               |& tee $out
           '';
 
-          cabal-fmt-check = pkgs.runCommand "cabal-fmt-check" {} ''
-            ${pkgs.haskellPackages.cabal-fmt}/bin/cabal-fmt \
-              -c ${filteredSrc pkgs}/**/*.cabal \
+          statix-check = pkgs.runCommand "statix-check" {} ''
+            ${pkgs.statix}/bin/statix check ${./.} \
               |& tee $out
           '';
         };
