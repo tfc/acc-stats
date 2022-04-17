@@ -11,6 +11,7 @@
       let
         filteredSrc = pkgs: pkgs.lib.sourceByRegex ./. [
           "^acc-.*"
+          "^hasql-example.*"
           "cabal.project"
         ];
         projectOverlay = final: prev: {

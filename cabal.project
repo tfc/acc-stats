@@ -7,6 +7,7 @@ packages:
   acc-stats-server
   acc-statspage
   acc-statspage-examples
+  hasql-example
 
 allow-newer:
   reflex-dom-core,
