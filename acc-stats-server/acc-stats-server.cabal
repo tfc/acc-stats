@@ -6,6 +6,7 @@ maintainer:         jacek@galowicz.de
 extra-source-files: CHANGELOG.md
 
 library
+  default-language: Haskell2010
   exposed-modules: Acc.Stats.Server
   hs-source-dirs:  src
   ghc-options:     -Wall -Werror -fhide-source-paths
@@ -26,6 +27,8 @@ library
     buildable: False
 
 executable acc-stats-server
+  default-language: Haskell2010
+
   main-is:        Main.hs
   build-depends:
     , acc-stats-api
@@ -47,6 +50,7 @@ executable acc-stats-server
     buildable: False
 
 test-suite acc-logging-server-test
+  default-language: Haskell2010
   type:           exitcode-stdio-1.0
   hs-source-dirs: unit-test
   main-is:        Main.hs

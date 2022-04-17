@@ -13,9 +13,10 @@ extra-source-files:
   examples/stats.txt
 
 library
-  exposed-modules: Acc.StatsPage.Examples
-  hs-source-dirs:  src
-  ghc-options:     -Wall -Werror -fhide-source-paths
+  default-language: Haskell2010
+  exposed-modules:  Acc.StatsPage.Examples
+  hs-source-dirs:   src
+  ghc-options:      -Wall -Werror -fhide-source-paths
   build-depends:
     , acc-statspage
     , base
@@ -26,10 +27,11 @@ library
     buildable: False
 
 test-suite acc-statspage-test
-  type:           exitcode-stdio-1.0
-  hs-source-dirs: unit-test
-  main-is:        Main.hs
-  ghc-options:    -Wall -Werror -fhide-source-paths
+  default-language: Haskell2010
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   unit-test
+  main-is:          Main.hs
+  ghc-options:      -Wall -Werror -fhide-source-paths
   build-depends:
     , acc-statspage
     , acc-statspage-examples
