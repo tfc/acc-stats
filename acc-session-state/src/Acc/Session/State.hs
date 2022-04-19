@@ -130,13 +130,13 @@ updateStintState pp gp = let
         -- new stint
         when (distanceTraveled < s ^. currentStint . stintDistance) $ modify storeStint
 
-        when validPhysicsData $ do
+        when validPhysicsData $ zoom currentStint $ do
             when (s ^. currentStint . initialPressures == V.empty) $
-                modify $ currentStint . initialPressures .~ pressures
+                modify $ initialPressures .~ pressures
 
-            modify $ (& currentStint . maxPressures %~ V.zipWith max pressures)
-                   . (& currentStint . avgPressures %~ V.zipWith (cumulativeAverage currentDataPoints) pressures)
-                   . (& currentStint . dataPoints %~ (+1))
+            modify $ (& maxPressures %~ V.zipWith max pressures)
+                   . (& avgPressures %~ V.zipWith (cumulativeAverage currentDataPoints) pressures)
+                   . (& dataPoints %~ (+1))
 
 
         modify $ currentStint . stintDistance .~ distanceTraveled
