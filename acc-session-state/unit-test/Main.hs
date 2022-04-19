@@ -97,10 +97,10 @@ zolder5Laptimes =
 
 sessionStateSpec :: Spec
 sessionStateSpec = do
-    describe "Test Run Data" $
+    describe "Real-Life Lap Data" $
         let
             lapTimeCheck filename correctLaps =
-              it ("from " <> filename <> " is correct") $ do
+              it ("lap times from " <> filename <> " are correct") $ do
                   inputs <- readData ("test-data/" <> filename)
                   s <- flip execStateT freshStint $
                       forM inputs $ updateLapState . _dataGraphics
@@ -108,6 +108,14 @@ sessionStateSpec = do
         in do
             lapTimeCheck "brands-hatch-3-laps.json" brandsHatch3Laptimes
             lapTimeCheck "zolder-5-laps-tyre-temps.json" zolder5Laptimes
+    describe "Real-Life Stint Data" $ do
+        it "Number of Stints is correct" $ do
+            inputs <- readData "test-data/zolder-5-laps-tyre-temps.json"
+            s <- flip execStateT freshSession $
+                forM inputs $ \(DataPoint gp _ pp) -> updateStintState pp gp
+
+            length (s ^. stints) `shouldBe` 2
+
 
 main :: IO ()
 main = hspec sessionStateSpec

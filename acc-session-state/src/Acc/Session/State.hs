@@ -2,16 +2,19 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Acc.Session.State where
 
+import Data.Maybe (fromJust)
 import           Acc.StatsPage
-import Control.Lens.Operators
+import           Control.Lens.Combinators
+import           Control.Lens.Operators
 import           Control.Lens.TH
 import           Control.Monad.State.Strict
+import qualified Data.Vector.Storable       as V
 import           GHC.Generics
 
 data Lap = Lap
     { _sectorTimes :: [Int]
-    , _lapTime        :: Int
-    , _lapValid       :: Bool
+    , _lapTime     :: Int
+    , _lapValid    :: Bool
     , _inLap       :: Bool
     , _outLap      :: Bool
     } deriving (Eq, Generic, Show)
@@ -19,12 +22,24 @@ data Lap = Lap
 makeLenses ''Lap
 
 data Stint = Stint
-    { _sector      :: Int
-    , _currentLap :: Lap
-    , _finishedLaps :: [Lap]
+    { _sector           :: Int
+    , _currentLap       :: Lap
+    , _finishedLaps     :: [Lap]
+    , _initialPressures :: V.Vector Float
+    , _maxPressures     :: V.Vector Float
+    , _avgPressures     :: V.Vector Float
+    , _dataPoints       :: Int
+    , _stintDistance    :: Float
     } deriving (Generic, Show)
 
 makeLenses ''Stint
+
+data Session = Session
+    { _stints          :: [Stint]
+    , _currentStint    :: Stint
+    } deriving (Generic, Show)
+
+makeLenses ''Session
 
 freshLap = Lap
     { _sectorTimes = []
@@ -38,6 +53,16 @@ freshStint = Stint
     { _sector = 2 -- end of imaginary lap
     , _currentLap = freshLap
     , _finishedLaps = []
+    , _initialPressures = V.empty
+    , _maxPressures = V.fromList [0, 0, 0, 0]
+    , _avgPressures = V.fromList [0, 0, 0, 0]
+    , _dataPoints = 0
+    , _stintDistance = 0.0
+    }
+
+freshSession = Session
+    { _stints = []
+    , _currentStint = freshStint
     }
 
 storeLap :: Int -> Stint -> Stint
@@ -56,7 +81,9 @@ storeLap lastTime s =
                   . (& sector .~ 0)
       oldLapStored = finishedLaps %~ (newLap:)
 
-updateLapState :: Monad m => GraphicsPage -> StateT Stint m ()
+updateLapState :: Monad m
+               => GraphicsPage
+               -> StateT Stint m ()
 updateLapState gp = let
         isInPitLane = gp ^. graphicsPageIsInPitLane /= 0
         currentSector = gp ^. graphicsPageCurrentSectorIndex
@@ -77,4 +104,39 @@ updateLapState gp = let
     -- new lap
     when (currentSector < s ^. sector) $ modify $ storeLap lastTime
 
-    modify (sector .~ currentSector)
+    modify $ sector .~ currentSector
+
+storeStint :: Session -> Session
+storeStint s = freshSession { _stints = s ^. currentStint : s ^. stints }
+
+cumulativeAverage :: Int -> Float -> Float -> Float
+cumulativeAverage n x oldAvg = (x + fromIntegral n * oldAvg) / (fromIntegral n + 1)
+
+updateStintState :: Monad m
+                 => PhysicsPage
+                 -> GraphicsPage
+                 -> StateT Session m ()
+updateStintState pp gp = let
+        distanceTraveled = gp ^. graphicsPageDistanceTraveled
+        pressures = pp ^. physicsPageWheelsPressure
+        tyreTemps = pp ^. physicsPageTyreCoreTemperature
+        validPhysicsData = tyreTemps V.! 0 > 0.1
+    in do
+        s <- get
+        let currentDataPoints = s ^. currentStint . dataPoints
+
+        zoom currentStint $ updateLapState gp
+
+        -- new stint
+        when (distanceTraveled < s ^. currentStint . stintDistance) $ modify storeStint
+
+        when validPhysicsData $ do
+            when (s ^. currentStint . initialPressures == V.empty) $
+                modify $ currentStint . initialPressures .~ pressures
+
+            modify $ (& currentStint . maxPressures %~ V.zipWith max pressures)
+                   . (& currentStint . avgPressures %~ V.zipWith (cumulativeAverage currentDataPoints) pressures)
+                   . (& currentStint . dataPoints %~ (+1))
+
+
+        modify $ currentStint . stintDistance .~ distanceTraveled
