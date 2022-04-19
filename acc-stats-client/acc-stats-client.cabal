@@ -35,6 +35,7 @@ executable acc-stats-client
     , acc-stats-api
     , acc-stats-client
     , acc-statspage
+    , aeson
     , base
     , binary
     , bytestring
@@ -42,6 +43,7 @@ executable acc-stats-client
     , http-types
     , servant
     , servant-client
+    , time
     , Win32
 
 executable acc-stats-client-fake

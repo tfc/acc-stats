@@ -12,6 +12,6 @@ getFunctionPostDataPoint :: IO (DataPoint -> IO (Either ClientError ()))
 getFunctionPostDataPoint = do
     let (_ :<|> postDataPointRoute :<|> _) = client (Proxy :: Proxy AccStatsApi)
     m <- newManager defaultManagerSettings
-    let clientEnv = mkClientEnv m (BaseUrl Http "acc.qssep.de" 80 "")
+    let clientEnv = mkClientEnv m (BaseUrl Http "localhost" 8000 "")
         postDataPoint dp = runClientM (postDataPointRoute dp) clientEnv
     return postDataPoint

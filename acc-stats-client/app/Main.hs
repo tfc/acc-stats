@@ -1,4 +1,5 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
@@ -9,9 +10,12 @@ import           Acc.StatsPage.Binary
 import           Control.Concurrent       (threadDelay)
 import           Control.Exception        (bracket)
 import           Control.Monad            (forever, (>=>))
+import           Data.Aeson               (encodeFile)
 import           Data.ByteString          (ByteString)
 import qualified Data.ByteString.Lazy     as BL
 import qualified Data.ByteString.Unsafe   as BSU
+import           Data.Time.Clock          (getCurrentTime)
+import           Data.Time.Format         (defaultTimeLocale, formatTime)
 import           Foreign.Ptr              (Ptr)
 import           GHC.Ptr                  (Ptr, plusPtr)
 import           Network.HTTP.Client      hiding (Proxy)
@@ -26,8 +30,7 @@ acpmfGraphics = "Local\\acpmf_graphics"
 
 withSharedWindowsMapping :: String -- shared mem fs path
                          -> Int    -- Size in bytes
-                         -> ((Ptr b, Int) -> IO a)
-                         -> IO a
+                         -> ((Ptr b, Int) -> IO a) -> IO a
 withSharedWindowsMapping path bytes f = let
         openPtr = do
             fm <- openFileMapping fILE_MAP_ALL_ACCESS False (Just path)
@@ -45,11 +48,13 @@ main = do
         withSharedWindowsMapping acpmfStatic (structureSize getStatPage) $ \pageStat ->
             withSharedWindowsMapping acpmfGraphics (structureSize getGraphicsPage) $ \pageGraph ->
                 forever $ do
+                    threadDelay 10000000
                     let f a b = readStructure a <$> BSU.unsafePackCStringLen b
                     pp <- f getPhysicsPage pagePhys
                     ps <- f getStatPage pageStat
                     pg <- f getGraphicsPage pageGraph
-                    print $ _physicsPageGear pp
-                    print $ _physicsPageWheelsPressure pp
-                    print =<< pd (DataPoint pg ps pp)
-                    threadDelay 3000000
+                    let content = DataPoint pg ps pp
+                    dateStr <- formatTime defaultTimeLocale "%Y-%m-%d--%H-%M-%S" <$> getCurrentTime
+                    let filename = dateStr <> ".json"
+                    encodeFile filename content
+                    putStrLn $ "Saved " <> filename
