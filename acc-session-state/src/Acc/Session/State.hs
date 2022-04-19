@@ -71,8 +71,8 @@ updateLapState gp = let
            . (& currentLap . lapValid %~ (&& currentLapValid))
 
     -- normal sector advance = same lap
-    when (currentSector > s ^. sector) $ modify
-        $ (& currentLap . sectorTimes %~ (lastSectorTime:))
+    when (currentSector > s ^. sector) $ modify $
+        currentLap . sectorTimes %~ (lastSectorTime:)
 
     -- new lap
     when (currentSector < s ^. sector) $ modify $ storeLap lastTime

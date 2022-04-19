@@ -6,9 +6,10 @@
 
 import           Acc.Session.State
 import           Acc.StatsPage
+import           Control.Lens.Operators
+import           Control.Monad              (forM)
 import           Control.Monad.State.Strict
 import           Data.Aeson
-import           Control.Lens.Operators
 import           Data.List                  (sort)
 import           Data.Maybe                 (fromJust)
 import           GHC.Generics
@@ -62,9 +63,8 @@ sessionStateSpec = do
       it "from Brands Hatch 3 Laps is correct" $ do
           inputs <- readBrandsHatch3Data
           s <- flip execStateT freshStint $
-              flip mapM inputs $ updateLapState . _dataGraphics
-          zipWithM shouldBe (s ^. finishedLaps) brandsHatch3Laptimes
-          return ()
+              forM inputs $ updateLapState . _dataGraphics
+          zipWithM_ shouldBe (s ^. finishedLaps) brandsHatch3Laptimes
 
 main :: IO ()
 main = hspec sessionStateSpec
