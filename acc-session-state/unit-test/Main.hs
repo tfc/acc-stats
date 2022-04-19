@@ -29,11 +29,9 @@ instance FromJSON DataPoint where
   parseJSON = genericParseJSON dataPointJsonOptions
 
 readBrandsHatch3Data :: IO [DataPoint]
-readBrandsHatch3Data = let
-        dir = "test-data/brands-hatch-3-laps"
-    in
-       (sort <$> listDirectory dir)
-   >>= mapM ((fromJust <$>) . decodeFileStrict' . ((dir <> "/") <>))
+readBrandsHatch3Data = (fromJust <$>)
+                     . decodeFileStrict'
+                     $ "test-data/brands-hatch-3-laps.json"
 
 -- last lap is displayed first
 brandsHatch3Laptimes :: [Lap]
