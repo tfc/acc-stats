@@ -24,6 +24,7 @@
               shell.buildInputs = with pkgs; [
                 cabal-install
                 haskellPackages.cabal-fmt
+                haskellPackages.ghcid
                 hlint
                 inotify-tools
                 nixpkgs-fmt
