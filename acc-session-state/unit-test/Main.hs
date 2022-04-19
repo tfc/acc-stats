@@ -29,10 +29,8 @@ dataPointJsonOptions = let l = length ("_data" :: String)
 instance FromJSON DataPoint where
   parseJSON = genericParseJSON dataPointJsonOptions
 
-readBrandsHatch3Data :: IO [DataPoint]
-readBrandsHatch3Data = (fromJust <$>)
-                     . decodeFileStrict'
-                     $ "test-data/brands-hatch-3-laps.json"
+readData :: String -> IO [DataPoint]
+readData = (fromJust <$>) . decodeFileStrict'
 
 -- last lap is displayed first
 brandsHatch3Laptimes :: [Lap]
@@ -57,14 +55,59 @@ brandsHatch3Laptimes =
           }
     ]
 
+
+readZolder5Data :: IO [DataPoint]
+readZolder5Data = (fromJust <$>)
+                . decodeFileStrict'
+                $ "test-data/zolder-5-laps-tyre-temps.json"
+
+zolder5Laptimes :: [Lap]
+zolder5Laptimes =
+    [ Lap {_sectorTimes = [31462,30365,30750]
+          , _lapTime = 92577
+          , _lapValid = True
+          , _inLap = False
+          , _outLap = False
+          }
+    , Lap {_sectorTimes = [32132,31223,30800]
+          , _lapTime = 94155
+          , _lapValid = True
+          , _inLap = False
+          , _outLap = False
+          }
+    , Lap {_sectorTimes = [269840,44862,31568]
+          , _lapTime = 346270
+          , _lapValid = False
+          , _inLap = False
+          , _outLap = True
+          }
+    , Lap {_sectorTimes = [32337,32123,30460]
+          , _lapTime = 94920
+          , _lapValid = True
+          , _inLap = False
+          , _outLap = False
+          }
+    , Lap {_sectorTimes = [135763,31543,31627]
+          , _lapTime = 198933
+          , _lapValid = True
+          , _inLap = False
+          , _outLap = True
+          }
+    ]
+
 sessionStateSpec :: Spec
 sessionStateSpec = do
-    describe "Test Run Data" $ do
-      it "from Brands Hatch 3 Laps is correct" $ do
-          inputs <- readBrandsHatch3Data
-          s <- flip execStateT freshStint $
-              forM inputs $ updateLapState . _dataGraphics
-          zipWithM_ shouldBe (s ^. finishedLaps) brandsHatch3Laptimes
+    describe "Test Run Data" $
+        let
+            lapTimeCheck filename correctLaps =
+              it ("from " <> filename <> " is correct") $ do
+                  inputs <- readData ("test-data/" <> filename)
+                  s <- flip execStateT freshStint $
+                      forM inputs $ updateLapState . _dataGraphics
+                  zipWithM_ shouldBe (s ^. finishedLaps) correctLaps
+        in do
+            lapTimeCheck "brands-hatch-3-laps.json" brandsHatch3Laptimes
+            lapTimeCheck "zolder-5-laps-tyre-temps.json" zolder5Laptimes
 
 main :: IO ()
 main = hspec sessionStateSpec
