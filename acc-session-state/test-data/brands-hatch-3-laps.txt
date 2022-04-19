@@ -1,0 +1,10 @@
+This folder contains shared mem data of a little test stint on brands hatch.
+
+The lap times are as following:
+
+S1        S2        S3        full-lap  delta   isValid extra-info
+01:13.391 00:23.017 00:37.400 02:13.808 +45.608   valid out-lap
+00:28.235 00:22.785 00:37.180 01:28.200           valid best-time
+00:28.245 00:22.567 00:39.230 01:30.042 +1.842  invalid 
+
+the in-lap isn't finished, hence the game didn't show sector times

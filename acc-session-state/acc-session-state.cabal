@@ -1,0 +1,33 @@
+cabal-version:      3.0
+name:               acc-session-state
+version:            0.1.0.0
+author:             Jacek Galowicz
+maintainer:         jacek@galowicz.de
+extra-source-files: CHANGELOG.md
+
+library
+  default-language: Haskell2010
+  hs-source-dirs:   src
+  exposed-modules:
+    , Acc.Session.State
+  build-depends:
+    , acc-statspage
+    , aeson
+    , base
+    , lens
+    , mtl
+
+test-suite acc-session-state-test
+  default-language: Haskell2010
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   unit-test
+  main-is:          Main.hs
+  build-depends:
+    , acc-session-state
+    , acc-statspage
+    , aeson
+    , base
+    , directory
+    , hspec
+    , lens
+    , mtl
