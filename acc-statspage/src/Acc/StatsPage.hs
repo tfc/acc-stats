@@ -216,3 +216,5 @@ instance ToJSON StatPage where
 $(makeLenses ''GraphicsPage)
 $(makeLenses ''PhysicsPage)
 $(makeLenses ''StatPage)
+
+data FullData = FullData GraphicsPage PhysicsPage StatPage

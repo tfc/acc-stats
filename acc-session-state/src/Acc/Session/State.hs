@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric   #-}
+{-# LANGUAGE LambdaCase      #-}
 {-# LANGUAGE TemplateHaskell #-}
 module Acc.Session.State where
 
@@ -83,7 +84,7 @@ storeLap lastTime s =
 
 updateLapState :: Monad m
                => GraphicsPage
-               -> StateT Stint m ()
+               -> StateT Stint m (Maybe LapEvent)
 updateLapState gp = let
         isInPitLane = gp ^. graphicsPageIsInPitLane /= 0
         currentSector = gp ^. graphicsPageCurrentSectorIndex
@@ -97,14 +98,22 @@ updateLapState gp = let
            . (& currentLap . inLap  %~ (|| (isInPitLane && currentSector == 2)))
            . (& currentLap . lapValid %~ (&& currentLapValid))
 
-    -- normal sector advance = same lap
-    when (currentSector > s ^. sector) $ modify $
-        currentLap . sectorTimes %~ (lastSectorTime:)
-
-    -- new lap
-    when (currentSector < s ^. sector) $ modify $ storeLap lastTime
-
+    let lastSector = s ^. sector
     modify $ sector .~ currentSector
+
+    -- normal sector advance = same lap
+    if currentSector > lastSector
+        then do
+                modify $ currentLap . sectorTimes %~ (lastSectorTime:)
+                return $ Just $ FinishedSector lastSector
+        else
+            -- new lap
+            if currentSector < lastSector
+               then do
+                       modify $ storeLap lastTime
+                       return $ Just $ FinishedLap lastTime
+                else return Nothing
+
 
 storeStint :: Session -> Session
 storeStint s = freshSession { _stints = s ^. currentStint : s ^. stints }
@@ -115,7 +124,7 @@ cumulativeAverage n x oldAvg = (x + fromIntegral n * oldAvg) / (fromIntegral n +
 updateStintState :: Monad m
                  => PhysicsPage
                  -> GraphicsPage
-                 -> StateT Session m ()
+                 -> StateT Session m (Maybe SessionEvent)
 updateStintState pp gp = let
         distanceTraveled = gp ^. graphicsPageDistanceTraveled
         pressures = pp ^. physicsPageWheelsPressure
@@ -124,19 +133,34 @@ updateStintState pp gp = let
     in do
         s <- get
         let currentDataPoints = s ^. currentStint . dataPoints
-
-        zoom currentStint $ updateLapState gp
-
-        -- new stint
-        when (distanceTraveled < s ^. currentStint . stintDistance) $ modify storeStint
-
-        when validPhysicsData $ zoom currentStint $ do
-            when (s ^. currentStint . initialPressures == V.empty) $
-                modify $ initialPressures .~ pressures
-
-            modify $ (& maxPressures %~ V.zipWith max pressures)
-                   . (& avgPressures %~ V.zipWith (cumulativeAverage currentDataPoints) pressures)
-                   . (& dataPoints %~ (+1))
-
+        let lastDistanceTraveled = s ^. currentStint . stintDistance
 
         modify $ currentStint . stintDistance .~ distanceTraveled
+
+        -- new stint
+        if distanceTraveled < lastDistanceTraveled
+           then do
+               modify storeStint
+               return $ Just NewSessionEvent
+            else do
+                when validPhysicsData $ zoom currentStint $ do
+                    when (s ^. currentStint . initialPressures == V.empty) $
+                        modify $ initialPressures .~ pressures
+
+                    modify $ (& maxPressures %~ V.zipWith max pressures)
+                           . (& avgPressures %~ V.zipWith (cumulativeAverage currentDataPoints) pressures)
+                           . (& dataPoints %~ (+1))
+
+                zoom currentStint $ updateLapState gp >>= \case
+                    Nothing -> return Nothing
+                    Just s -> return $ Just $ LapEv s
+
+
+
+data LapEvent = FinishedSector Int
+              | FinishedLap Int
+              deriving Show
+
+data SessionEvent = NewSessionEvent
+                  | LapEv LapEvent
+                  deriving Show
