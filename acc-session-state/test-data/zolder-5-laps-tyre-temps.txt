@@ -1,0 +1,10 @@
+This test data contains data of the following session:
+
+1.) begin practice
+2.) switch into setup menu
+3.) drive 2 valid laps
+4.) enter pit via pause menu
+5.) enter setup, set all tyre pressures to 27.0 psi
+6.) start run but wait in pit lane until pressures are down to 26.3 psi
+7.) drive a few valid laps (first invalid because of incident) and heat
+    up tyres
