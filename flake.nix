@@ -50,7 +50,9 @@
         packages = {
           acc-stats-client-windows =
             windowsFlake.packages."acc-stats-client:exe:acc-stats-client";
+        };
 
+        checks = {
           cabal-fmt-check = pkgs.runCommand "cabal-fmt-check" {} ''
             ${pkgs.haskellPackages.cabal-fmt}/bin/cabal-fmt \
               -c ${filteredSrc pkgs}/**/*.cabal \
