@@ -20,18 +20,16 @@ data Lap = Lap
 
 makeLenses ''Lap
 
-data Stint = Stint
+data StintState = StintState
     { _sector           :: Int
     , _currentLap       :: Lap
-    , _finishedLaps     :: [Lap]
     , _stintDistance    :: Float
     } deriving (Generic, Show)
 
-makeLenses ''Stint
+makeLenses ''StintState
 
 data Session = Session
-    { _stints          :: [Stint]
-    , _currentStint    :: Stint
+    { _currentStint    :: StintState
     } deriving (Generic, Show)
 
 makeLenses ''Session
@@ -44,17 +42,13 @@ freshLap = Lap
     , _outLap = False
     }
 
-freshStint = Stint
+freshStint = StintState
     { _sector = 2 -- end of imaginary lap
     , _currentLap = freshLap
-    , _finishedLaps = []
     , _stintDistance = 0.0
     }
 
-freshSession = Session
-    { _stints = []
-    , _currentStint = freshStint
-    }
+freshSession = Session freshStint
 
 finalizeLap :: Int -> Lap -> Lap
 finalizeLap lastTime lap = let
@@ -64,20 +58,16 @@ finalizeLap lastTime lap = let
         lap & lapTime .~ lastTime
             & sectorTimes .~ sectorDiffs
 
-isLegitLap :: Lap -> Bool
-isLegitLap lap = length (lap ^. sectorTimes) == 3
+isFullLap :: Lap -> Bool
+isFullLap lap = length (lap ^. sectorTimes) == 3
 
-
-startFreshLap :: Stint -> Stint
+startFreshLap :: StintState -> StintState
 startFreshLap = (& currentLap .~ freshLap)
               . (& sector .~ 0)
 
-appendNewLapToOldLaps :: Lap -> Stint -> Stint
-appendNewLapToOldLaps newLap = finishedLaps %~ (newLap:)
-
 updateLapState :: Monad m
                => GraphicsPage
-               -> StateT Stint m (Maybe LapEvent)
+               -> StateT StintState m (Maybe LapEvent)
 updateLapState gp = let
         isInPitLane = gp ^. graphicsPageIsInPitLane /= 0
         currentSector = gp ^. graphicsPageCurrentSectorIndex
@@ -97,8 +87,8 @@ updateLapState gp = let
     -- normal sector advance = same lap
     if currentSector > lastSector
         then do
-                modify $ currentLap . sectorTimes %~ (lastSectorTime:)
-                return $ Just $ FinishedSector lastSector
+            modify $ currentLap . sectorTimes %~ (lastSectorTime:)
+            return $ Just $ FinishedSector lastSector
         else
             -- new lap
             if currentSector < lastSector
@@ -106,37 +96,29 @@ updateLapState gp = let
                    let newLap = finalizeLap lastTime (s ^. currentLap)
                    modify startFreshLap
 
-                   if isLegitLap newLap
-                       then modify (appendNewLapToOldLaps newLap)
-                         >> return (Just $ FinishedLap newLap)
+                   if isFullLap newLap
+                       then return $ Just $ FinishedLap newLap
                        else return Nothing
                 else return Nothing
 
-
-storeStint :: Session -> Session
-storeStint s = freshSession { _stints = s ^. currentStint : s ^. stints }
+swapState :: MonadState s m => s -> m s
+swapState s = get >>= (put s >>) . return
 
 updateStintState :: Monad m
                  => PhysicsPage
                  -> GraphicsPage
                  -> StateT Session m (Maybe SessionEvent)
-updateStintState pp gp = let
-        distanceTraveled = gp ^. graphicsPageDistanceTraveled
-    in do
-        s <- get
-        let lastDistanceTraveled = s ^. currentStint . stintDistance
+updateStintState pp gp = do
+    let distanceTraveled = gp ^. graphicsPageDistanceTraveled
+    lastDistanceTraveled <- zoom (currentStint . stintDistance)
+                          $ swapState distanceTraveled
 
-        modify $ currentStint . stintDistance .~ distanceTraveled
-
-        -- new stint
-        if distanceTraveled < lastDistanceTraveled
-           then do
-               modify storeStint
-               return $ Just NewStintEvent
-            else zoom currentStint $ updateLapState gp >>= \case
-                Nothing -> return Nothing
-                Just s -> return $ Just $ LapEv s
-
+    if distanceTraveled < lastDistanceTraveled
+       -- new stint
+       then modify (& currentStint .~ freshStint)
+         >> return (Just NewStintEvent)
+       else zoom currentStint $ updateLapState gp
+        >>= return . fmap LapEv
 
 
 data LapEvent = FinishedSector Int
