@@ -56,21 +56,24 @@ freshSession = Session
     , _currentStint = freshStint
     }
 
-storeLap :: Int -> Stint -> Stint
-storeLap lastTime s =
-    if length (s ^. currentLap . sectorTimes) /= 2
-       then newLapAdded s
-       else oldLapStored $ newLapAdded s
-    where
-      sectors = (lastTime : (s ^. currentLap . sectorTimes)) ++ [0]
-      sectorDiffs = reverse $ zipWith (-) sectors (tail sectors)
-      newLap = (s ^. currentLap)
-        & lapTime .~ lastTime
-        & sectorTimes .~ sectorDiffs
+finalizeLap :: Int -> Lap -> Lap
+finalizeLap lastTime lap = let
+    sectors = lap ^. sectorTimes ++ [0]
+    sectorDiffs = reverse $ zipWith (-) (lastTime:sectors) sectors
+    in
+        lap & lapTime .~ lastTime
+            & sectorTimes .~ sectorDiffs
 
-      newLapAdded = (& currentLap .~ freshLap)
-                  . (& sector .~ 0)
-      oldLapStored = finishedLaps %~ (newLap:)
+isLegitLap :: Lap -> Bool
+isLegitLap lap = length (lap ^. sectorTimes) == 3
+
+
+startFreshLap :: Stint -> Stint
+startFreshLap = (& currentLap .~ freshLap)
+              . (& sector .~ 0)
+
+appendNewLapToOldLaps :: Lap -> Stint -> Stint
+appendNewLapToOldLaps newLap = finishedLaps %~ (newLap:)
 
 updateLapState :: Monad m
                => GraphicsPage
@@ -100,8 +103,13 @@ updateLapState gp = let
             -- new lap
             if currentSector < lastSector
                then do
-                       modify $ storeLap lastTime
-                       return $ Just $ FinishedLap lastTime
+                   let newLap = finalizeLap lastTime (s ^. currentLap)
+                   modify startFreshLap
+
+                   if isLegitLap newLap
+                       then modify (appendNewLapToOldLaps newLap)
+                         >> return (Just $ FinishedLap newLap)
+                       else return Nothing
                 else return Nothing
 
 
@@ -124,7 +132,7 @@ updateStintState pp gp = let
         if distanceTraveled < lastDistanceTraveled
            then do
                modify storeStint
-               return $ Just NewSessionEvent
+               return $ Just NewStintEvent
             else zoom currentStint $ updateLapState gp >>= \case
                 Nothing -> return Nothing
                 Just s -> return $ Just $ LapEv s
@@ -132,9 +140,9 @@ updateStintState pp gp = let
 
 
 data LapEvent = FinishedSector Int
-              | FinishedLap Int
+              | FinishedLap Lap
               deriving Show
 
-data SessionEvent = NewSessionEvent
+data SessionEvent = NewStintEvent
                   | LapEv LapEvent
                   deriving Show
