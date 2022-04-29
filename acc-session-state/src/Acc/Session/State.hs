@@ -3,13 +3,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Acc.Session.State where
 
-import Data.Maybe (fromJust)
 import           Acc.StatsPage
 import           Control.Lens.Combinators
 import           Control.Lens.Operators
 import           Control.Lens.TH
 import           Control.Monad.State.Strict
-import qualified Data.Vector.Storable       as V
 import           GHC.Generics
 
 data Lap = Lap
@@ -26,10 +24,6 @@ data Stint = Stint
     { _sector           :: Int
     , _currentLap       :: Lap
     , _finishedLaps     :: [Lap]
-    , _initialPressures :: V.Vector Float
-    , _maxPressures     :: V.Vector Float
-    , _avgPressures     :: V.Vector Float
-    , _dataPoints       :: Int
     , _stintDistance    :: Float
     } deriving (Generic, Show)
 
@@ -54,10 +48,6 @@ freshStint = Stint
     { _sector = 2 -- end of imaginary lap
     , _currentLap = freshLap
     , _finishedLaps = []
-    , _initialPressures = V.empty
-    , _maxPressures = V.fromList [0, 0, 0, 0]
-    , _avgPressures = V.fromList [0, 0, 0, 0]
-    , _dataPoints = 0
     , _stintDistance = 0.0
     }
 
@@ -118,21 +108,14 @@ updateLapState gp = let
 storeStint :: Session -> Session
 storeStint s = freshSession { _stints = s ^. currentStint : s ^. stints }
 
-cumulativeAverage :: Int -> Float -> Float -> Float
-cumulativeAverage n x oldAvg = (x + fromIntegral n * oldAvg) / (fromIntegral n + 1)
-
 updateStintState :: Monad m
                  => PhysicsPage
                  -> GraphicsPage
                  -> StateT Session m (Maybe SessionEvent)
 updateStintState pp gp = let
         distanceTraveled = gp ^. graphicsPageDistanceTraveled
-        pressures = pp ^. physicsPageWheelsPressure
-        tyreTemps = pp ^. physicsPageTyreCoreTemperature
-        validPhysicsData = tyreTemps V.! 0 > 0.1
     in do
         s <- get
-        let currentDataPoints = s ^. currentStint . dataPoints
         let lastDistanceTraveled = s ^. currentStint . stintDistance
 
         modify $ currentStint . stintDistance .~ distanceTraveled
@@ -142,18 +125,9 @@ updateStintState pp gp = let
            then do
                modify storeStint
                return $ Just NewSessionEvent
-            else do
-                when validPhysicsData $ zoom currentStint $ do
-                    when (s ^. currentStint . initialPressures == V.empty) $
-                        modify $ initialPressures .~ pressures
-
-                    modify $ (& maxPressures %~ V.zipWith max pressures)
-                           . (& avgPressures %~ V.zipWith (cumulativeAverage currentDataPoints) pressures)
-                           . (& dataPoints %~ (+1))
-
-                zoom currentStint $ updateLapState gp >>= \case
-                    Nothing -> return Nothing
-                    Just s -> return $ Just $ LapEv s
+            else zoom currentStint $ updateLapState gp >>= \case
+                Nothing -> return Nothing
+                Just s -> return $ Just $ LapEv s
 
 
 
