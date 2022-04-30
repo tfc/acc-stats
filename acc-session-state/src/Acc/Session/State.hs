@@ -8,6 +8,7 @@ import           Control.Lens.Combinators
 import           Control.Lens.Operators
 import           Control.Lens.TH
 import           Control.Monad.State.Strict
+import           Data.Maybe                 (catMaybes)
 import           GHC.Generics
 
 data Lap = Lap
@@ -20,20 +21,6 @@ data Lap = Lap
 
 makeLenses ''Lap
 
-data StintState = StintState
-    { _sector           :: Int
-    , _currentLap       :: Lap
-    , _stintDistance    :: Float
-    } deriving (Generic, Show)
-
-makeLenses ''StintState
-
-data Session = Session
-    { _currentStint    :: StintState
-    } deriving (Generic, Show)
-
-makeLenses ''Session
-
 freshLap = Lap
     { _sectorTimes = []
     , _lapTime = 0
@@ -42,13 +29,53 @@ freshLap = Lap
     , _outLap = False
     }
 
-freshStint = StintState
-    { _sector = 2 -- end of imaginary lap
-    , _currentLap = freshLap
-    , _stintDistance = 0.0
-    }
+data StintState = StintState
+    { _lastGraphics    :: GraphicsPage
+    , _currentGraphics :: GraphicsPage
+    , _currentLap      :: Lap
+    , _currentSector   :: Int
+    } deriving (Generic, Show)
 
-freshSession = Session freshStint
+makeLenses ''StintState
+
+freshStintState :: GraphicsPage -> GraphicsPage -> StintState
+freshStintState oldGp newGp = StintState oldGp newGp freshLap 0
+
+data Event = NextStint
+           | NextLap
+           | NextSector
+           | SectorInvalidated
+           | PitlaneEntry
+           | PitlaneExit
+    deriving (Eq, Show)
+
+-- Theoretically all those events are discrete enough to not happen at the
+-- same time, but: If the sampling rate is low enough it looks like they
+-- happen at the same time. In what order to handle them is then a matter of
+-- definitions.
+eventsFromData :: GraphicsPage -> GraphicsPage -> [Event]
+eventsFromData last next = mconcat $ map f eventFunctions
+    where
+      f (condition, result) = [result | condition next last]
+      isInPitlane = (/= 0) . (^. graphicsPageIsInPitLane)
+      isValid = (/= 0) . (^. graphicsPageIsValidLap)
+      eventFunctions =
+        [ ((. (not . isInPitlane)) . (&&) . isInPitlane
+          , PitlaneEntry)
+        , ((. isInPitlane) . (&&) . (not . isInPitlane)
+          , PitlaneExit)
+        , ((. (^. graphicsPageCurrentSectorIndex) ) .
+            (<) . (^. graphicsPageCurrentSectorIndex)
+          , NextLap)
+        , ((. (^. graphicsPageCurrentSectorIndex) ) .
+            (>) . (^. graphicsPageCurrentSectorIndex)
+          , NextSector)
+        , ((. (^. graphicsPageDistanceTraveled) ) .
+            (<) . (^. graphicsPageDistanceTraveled)
+          , NextStint)
+        , ((. isValid) . (&&) . (not . isValid)
+          , SectorInvalidated)
+        ]
 
 finalizeLap :: Int -> Lap -> Lap
 finalizeLap lastTime lap = let
@@ -61,70 +88,61 @@ finalizeLap lastTime lap = let
 isFullLap :: Lap -> Bool
 isFullLap lap = length (lap ^. sectorTimes) == 3
 
-startFreshLap :: StintState -> StintState
-startFreshLap = (& currentLap .~ freshLap)
-              . (& sector .~ 0)
-
-updateLapState :: Monad m
-               => GraphicsPage
-               -> StateT StintState m (Maybe LapEvent)
-updateLapState gp = let
-        isInPitLane = gp ^. graphicsPageIsInPitLane /= 0
-        currentSector = gp ^. graphicsPageCurrentSectorIndex
-        lastSectorTime = gp ^. graphicsPageLastSectorTime
-        lastTime = gp ^. graphicsPageILastTimeMs
-        currentLapValid = gp ^. graphicsPageIsValidLap /= 0
-    in do
-    s <- get
-
-    modify $ (& currentLap . outLap %~ (|| (isInPitLane && currentSector == 0)))
-           . (& currentLap . inLap  %~ (|| (isInPitLane && currentSector == 2)))
-           . (& currentLap . lapValid %~ (&& currentLapValid))
-
-    let lastSector = s ^. sector
-    modify $ sector .~ currentSector
-
-    -- normal sector advance = same lap
-    if currentSector > lastSector
-        then do
-            modify $ currentLap . sectorTimes %~ (lastSectorTime:)
-            return $ Just $ FinishedSector lastSector
-        else
-            -- new lap
-            if currentSector < lastSector
-               then do
-                   let newLap = finalizeLap lastTime (s ^. currentLap)
-                   modify startFreshLap
-
-                   if isFullLap newLap
-                       then return $ Just $ FinishedLap newLap
-                       else return Nothing
-                else return Nothing
-
 swapState :: MonadState s m => s -> m s
 swapState s = get >>= (put s >>) . return
 
-updateStintState :: Monad m
-                 => PhysicsPage
-                 -> GraphicsPage
-                 -> StateT Session m (Maybe SessionEvent)
-updateStintState pp gp = do
-    let distanceTraveled = gp ^. graphicsPageDistanceTraveled
-    lastDistanceTraveled <- zoom (currentStint . stintDistance)
-                          $ swapState distanceTraveled
-
-    if distanceTraveled < lastDistanceTraveled
-       -- new stint
-       then modify (& currentStint .~ freshStint)
-         >> return (Just NewStintEvent)
-       else zoom currentStint $ updateLapState gp
-        >>= return . fmap LapEv
-
-
-data LapEvent = FinishedSector Int
-              | FinishedLap Lap
-              deriving Show
-
-data SessionEvent = NewStintEvent
-                  | LapEv LapEvent
+data SessionEvent = FinishedSector Int
+                  | FinishedLap Lap
+                  | FinishedStint Float
                   deriving Show
+
+updateStint :: MonadIO m
+          => GraphicsPage
+          -> StateT StintState m [SessionEvent]
+updateStint nextGp = do
+    -- TODO SWAP
+    lastGp <- gets (^. currentGraphics)
+    modify $ (& currentGraphics .~ nextGp)
+           . (& lastGraphics .~ lastGp)
+    let events = eventsFromData lastGp nextGp
+    catMaybes <$> mapM updateState events
+
+updateState :: MonadIO m
+            => Event
+            -> StateT StintState m (Maybe SessionEvent)
+
+updateState NextStint = do
+    -- drop everything but the graphics page
+    oldState <- get
+    put $ freshStintState (oldState ^. lastGraphics) (oldState ^. currentGraphics)
+
+    -- some laps are invalid from the beginning
+    validLap <- (/= 0) <$> gets (^. currentGraphics . graphicsPageIsValidLap)
+    modify (& currentLap . lapValid .~ validLap)
+
+    Just . FinishedStint <$> gets (^. lastGraphics . graphicsPageDistanceTraveled)
+
+updateState NextLap = do
+    currentLapState <- gets _currentLap
+    lastTime <- gets (^. currentGraphics . graphicsPageILastTimeMs)
+    let finishedLap = finalizeLap lastTime currentLapState
+    modify $ (& currentLap .~ freshLap)
+           . (& currentSector .~ 0)
+    if isFullLap finishedLap
+        then return $ Just $ FinishedLap finishedLap
+        else return Nothing
+
+updateState NextSector = do
+    lastSector <- gets (^. currentGraphics . graphicsPageCurrentSectorIndex)
+    sectorTime <- gets (^. currentGraphics . graphicsPageLastSectorTime)
+    modify (& currentLap . sectorTimes %~ (sectorTime:))
+    return $ Just $ FinishedSector lastSector
+
+updateState SectorInvalidated = modify (& currentLap . lapValid .~ False)
+    >> return Nothing
+
+updateState PitlaneEntry = modify (& currentLap . inLap .~ True)
+    >> return Nothing
+
+updateState PitlaneExit = modify (& currentLap . outLap .~ True)
+    >> return Nothing

@@ -11,7 +11,7 @@ import           Control.Monad              (forM)
 import           Control.Monad.State.Strict
 import           Data.Aeson
 import           Data.List                  (sort)
-import           Data.Maybe                 (catMaybes, fromJust)
+import           Data.Maybe                 (catMaybes, fromJust, mapMaybe)
 import           GHC.Generics
 import           System.Directory           (listDirectory)
 import           Test.Hspec
@@ -96,12 +96,12 @@ zolder5Laptimes =
     ]
 
 
-lapFromLapEvent :: LapEvent -> Maybe Lap
+lapFromLapEvent :: SessionEvent -> Maybe Lap
 lapFromLapEvent (FinishedLap x) = Just x
 lapFromLapEvent _ = Nothing
 
 stintFromSessionEvent :: SessionEvent -> Maybe SessionEvent
-stintFromSessionEvent NewStintEvent = Just NewStintEvent
+stintFromSessionEvent (FinishedStint x) = Just $ FinishedStint x
 stintFromSessionEvent _ = Nothing
 
 sessionStateSpec :: Spec
@@ -111,10 +111,11 @@ sessionStateSpec = do
             lapTimeCheck filename correctLaps =
               it ("lap times from " <> filename <> " are correct") $ do
                   inputs <- readData ("test-data/" <> filename)
-                  (a, s) <- flip runStateT freshStint $
-                      forM inputs $ updateLapState . _dataGraphics
+                  let initialGraphics = _dataGraphics $ head inputs
+                  (a, s) <- flip runStateT (freshStintState initialGraphics initialGraphics) $
+                      forM inputs $ updateStint . _dataGraphics
 
-                  let calculatedLaps = catMaybes $ map lapFromLapEvent $ catMaybes a
+                  let calculatedLaps = mapMaybe lapFromLapEvent $ concat a
 
                   zipWithM_ shouldBe calculatedLaps correctLaps
         in do
@@ -123,10 +124,11 @@ sessionStateSpec = do
     describe "Real-Life Stint Data" $ do
         it "Number of Stints is correct" $ do
             inputs <- readData "test-data/zolder-5-laps-tyre-temps.json"
-            (a, s) <- flip runStateT freshSession $
-                forM inputs $ \(DataPoint gp _ pp) -> updateStintState pp gp
+            let initialGraphics = _dataGraphics $ head inputs
+            (a, s) <- flip runStateT (freshStintState initialGraphics initialGraphics) $
+                forM inputs $ \(DataPoint gp _ _) -> updateStint gp
 
-            let stintEvents = catMaybes $ map stintFromSessionEvent $ catMaybes a
+            let stintEvents = mapMaybe stintFromSessionEvent $ concat a
             length stintEvents `shouldBe` 2
 
 
