@@ -1,33 +1,15 @@
 {-# LANGUAGE BangPatterns    #-}
 {-# LANGUAGE DeriveGeneric   #-}
-{-# LANGUAGE LambdaCase      #-}
 {-# LANGUAGE TemplateHaskell #-}
 module Acc.Session.State where
 
+import           Acc.Session.DataStructures
 import           Acc.StatsPage
 import           Control.Lens.Combinators
 import           Control.Lens.Operators
-import           Control.Lens.TH
 import           Control.Monad.State.Strict
 import           Data.Maybe                 (catMaybes)
 import           GHC.Generics
-
-data Lap = Lap
-    { _sectorTimes :: ![Int]
-    , _lapTime     :: !Int
-    , _lapValid    :: !Bool
-    , _inLap       :: !Bool
-    , _outLap      :: !Bool
-    } deriving (Eq, Generic, Show)
-
-makeLenses ''Lap
-
-data LapTelemetry = LapTelemetry
-    { _telNormPosition :: !Float
-    , _telSpeed        :: !Float
-    , _telGas          :: !Float
-    , _telBrake        :: !Float
-    } deriving (Show)
 
 freshLap = Lap
     { _sectorTimes = []
