@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns    #-}
 {-# LANGUAGE DeriveGeneric   #-}
 {-# LANGUAGE LambdaCase      #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -12,14 +13,21 @@ import           Data.Maybe                 (catMaybes)
 import           GHC.Generics
 
 data Lap = Lap
-    { _sectorTimes :: [Int]
-    , _lapTime     :: Int
-    , _lapValid    :: Bool
-    , _inLap       :: Bool
-    , _outLap      :: Bool
+    { _sectorTimes :: ![Int]
+    , _lapTime     :: !Int
+    , _lapValid    :: !Bool
+    , _inLap       :: !Bool
+    , _outLap      :: !Bool
     } deriving (Eq, Generic, Show)
 
 makeLenses ''Lap
+
+data LapTelemetry = LapTelemetry
+    { _telNormPosition :: !Float
+    , _telSpeed        :: !Float
+    , _telGas          :: !Float
+    , _telBrake        :: !Float
+    } deriving (Show)
 
 freshLap = Lap
     { _sectorTimes = []
@@ -32,14 +40,21 @@ freshLap = Lap
 data StintState = StintState
     { _lastGraphics    :: GraphicsPage
     , _currentGraphics :: GraphicsPage
-    , _currentLap      :: Lap
-    , _currentSector   :: Int
+    , _currentLap      :: !Lap
+    , _lapTelemetry    :: ![LapTelemetry]
+    , _currentSector   :: !Int
     } deriving (Generic, Show)
 
 makeLenses ''StintState
 
 freshStintState :: GraphicsPage -> GraphicsPage -> StintState
-freshStintState oldGp newGp = StintState oldGp newGp freshLap 0
+freshStintState oldGp newGp = StintState
+    { _lastGraphics = oldGp
+    , _currentGraphics = newGp
+    , _currentLap = freshLap
+    , _lapTelemetry = []
+    , _currentSector = 0
+    }
 
 data Event = NextStint
            | NextLap
@@ -92,22 +107,37 @@ swapState :: MonadState s m => s -> m s
 swapState s = get >>= (put s >>) . return
 
 data SessionEvent = FinishedSector Int
-                  | FinishedLap Lap
+                  | FinishedLap Lap [LapTelemetry]
                   | FinishedStint Float
                   deriving Show
 
-updateStint :: MonadIO m
-          => GraphicsPage
-          -> StateT StintState m [SessionEvent]
-updateStint nextGp = do
-    -- TODO SWAP
+shiftGraphicsInput :: Monad m => GraphicsPage -> StateT StintState m ()
+shiftGraphicsInput nextGp = do
     lastGp <- gets (^. currentGraphics)
-    modify $ (& currentGraphics .~ nextGp)
-           . (& lastGraphics .~ lastGp)
-    let events = eventsFromData lastGp nextGp
-    catMaybes <$> mapM updateState events
+    modify $ (& lastGraphics .~ lastGp)
+           . (& currentGraphics .~ nextGp)
 
-updateState :: MonadIO m
+updateTelemetry :: Monad m => PhysicsPage -> StateT StintState m ()
+updateTelemetry pp = do
+    let speed = pp ^. physicsPageSpeedKmh
+        gas = pp ^. physicsPageGas
+        brake = pp ^. physicsPageBrake
+    pos <- gets (^. currentGraphics . graphicsPageNormalizedCarPosition)
+    modify (& lapTelemetry %~ (LapTelemetry pos speed gas brake:))
+
+updateStint :: Monad m
+          => GraphicsPage
+          -> PhysicsPage
+          -> StateT StintState m [SessionEvent]
+updateStint nextGp pp = do
+    lastGp <- gets (^. currentGraphics)
+    let events = eventsFromData lastGp nextGp
+    shiftGraphicsInput nextGp
+    rets <- catMaybes <$> mapM updateState events
+    updateTelemetry pp
+    return rets
+
+updateState :: Monad m
             => Event
             -> StateT StintState m (Maybe SessionEvent)
 
@@ -128,8 +158,10 @@ updateState NextLap = do
     let finishedLap = finalizeLap lastTime currentLapState
     modify $ (& currentLap .~ freshLap)
            . (& currentSector .~ 0)
+
+    lapTelemetry <- reverse <$> zoom lapTelemetry (swapState [])
     if isFullLap finishedLap
-        then return $ Just $ FinishedLap finishedLap
+        then return $ Just $ FinishedLap finishedLap lapTelemetry
         else return Nothing
 
 updateState NextSector = do

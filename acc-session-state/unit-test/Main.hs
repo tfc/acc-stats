@@ -96,8 +96,8 @@ zolder5Laptimes =
     ]
 
 
-lapFromLapEvent :: SessionEvent -> Maybe Lap
-lapFromLapEvent (FinishedLap x) = Just x
+lapFromLapEvent :: SessionEvent -> Maybe SessionEvent
+lapFromLapEvent l@(FinishedLap _ _) = Just l
 lapFromLapEvent _ = Nothing
 
 stintFromSessionEvent :: SessionEvent -> Maybe SessionEvent
@@ -113,9 +113,12 @@ sessionStateSpec = do
                   inputs <- readData ("test-data/" <> filename)
                   let initialGraphics = _dataGraphics $ head inputs
                   (a, s) <- flip runStateT (freshStintState initialGraphics initialGraphics) $
-                      forM inputs $ updateStint . _dataGraphics
+                      forM inputs $ \(DataPoint gp _ pp) -> updateStint gp pp
 
-                  let calculatedLaps = mapMaybe lapFromLapEvent $ concat a
+                  let getLap (FinishedLap x _) = x
+                      calculatedLaps = map getLap
+                                     $ mapMaybe lapFromLapEvent
+                                     $ concat a
 
                   zipWithM_ shouldBe calculatedLaps correctLaps
         in do
@@ -126,10 +129,17 @@ sessionStateSpec = do
             inputs <- readData "test-data/zolder-5-laps-tyre-temps.json"
             let initialGraphics = _dataGraphics $ head inputs
             (a, s) <- flip runStateT (freshStintState initialGraphics initialGraphics) $
-                forM inputs $ \(DataPoint gp _ _) -> updateStint gp
+                forM inputs $ \(DataPoint gp _ pp) -> updateStint gp pp
 
             let stintEvents = mapMaybe stintFromSessionEvent $ concat a
             length stintEvents `shouldBe` 2
+
+            let calculatedLaps = mapMaybe lapFromLapEvent
+                               $ concat a
+
+            forM_ calculatedLaps $ \(FinishedLap laptime telem) -> do
+                print laptime
+                mapM_ print telem
 
 
 main :: IO ()
