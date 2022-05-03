@@ -1,37 +1,23 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeOperators         #-}
-
 module Acc.Stats.API where
 
-import           Acc.StatsPage
-import           Control.Lens.TH
+import           Acc.Session.DataStructures
 import           Data.Aeson
-import qualified Data.Map.Strict as HM
+import           Data.Bifunctor             (bimap)
+import           Data.ByteString.Lazy       (fromStrict)
 import           Data.Proxy
-import           Data.Text       (Text)
-import           GHC.Generics    (Generic)
+import           Data.Text                  (Text)
+import           Flat
+import           Network.HTTP.Media         ((//), (/:))
 import           Servant.API
-
-data DataPoint = DataPoint
-    { _dataGraphics :: GraphicsPage
-    , _dataStat     :: StatPage
-    , _dataPhysics  :: PhysicsPage
-    } deriving (Eq, Generic, Show)
-
-$(makeLenses ''DataPoint)
-
-dataPointJsonOptions :: Options
-dataPointJsonOptions = let l = length ("_data" :: String)
-  in defaultOptions { fieldLabelModifier = camelTo2 '_' . drop l }
-
-instance FromJSON DataPoint where
-  parseJSON = genericParseJSON dataPointJsonOptions
-instance ToJSON DataPoint where
-  toJSON = genericToJSON dataPointJsonOptions
+import           Servant.API.Generic
 
 data DisplayData = DisplayData
     { displayPressures :: [Float]
@@ -53,18 +39,33 @@ data DisplayData = DisplayData
     , displayMfdFuelAdd :: Float
     } deriving (Eq, Generic, Show)
 
-instance ToJSON DisplayData
-instance FromJSON DisplayData
 
-type AccStatsApi =
-           Summary "List latest telemetry"
-        :> "latest"
-        :> Get '[JSON] (HM.Map Text DataPoint)
-    :<|>   Summary "Post new data point"
-        :> "post"
-        :> ReqBody '[JSON] DataPoint
-        :> Post '[JSON] ()
-    :<|> "display" :> Get '[JSON] (HM.Map Text DisplayData)
+displayDataJsonOptions :: Options
+displayDataJsonOptions = let l = length ("display" :: String)
+  in defaultOptions { fieldLabelModifier = camelTo2 '_' . drop l }
 
-accStatsApiProxy :: Proxy AccStatsApi
-accStatsApiProxy = Proxy
+instance ToJSON DisplayData where
+  toJSON = genericToJSON displayDataJsonOptions
+instance FromJSON DisplayData where
+  parseJSON = genericParseJSON displayDataJsonOptions
+
+data FlatContentType
+
+instance Accept FlatContentType where
+   contentType _ = "acc-stats-flat" // "acc.stats" /: ("charset", "utf-8")
+
+instance Flat a => MimeRender FlatContentType a where
+    mimeRender _ = fromStrict . flat
+
+instance Flat a => MimeUnrender FlatContentType a where
+    mimeUnrender _ = bimap show id . unflat
+
+data SessionRoutes route = SessionRoutes
+    { _postNewSession :: route :- Post '[JSON] Int
+    , _putNewEvent :: route :- Capture "id" Int
+                            :> ReqBody '[FlatContentType] SessionEvent
+                            :> Put '[JSON] ()
+    } deriving (Generic)
+
+accStatsApiProxy :: Proxy (ToServantApi SessionRoutes)
+accStatsApiProxy = genericApi (Proxy :: Proxy SessionRoutes)

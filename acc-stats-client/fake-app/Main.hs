@@ -1,14 +1,33 @@
 module Main where
 
+import           Acc.Session.DataStructures
 import           Acc.Stats.API
 import           Acc.Stats.Client
-import qualified Acc.StatsPage.Examples as Ex
-import           Control.Concurrent     (threadDelay)
-import           Control.Monad          (forever, (>=>))
+import qualified Acc.StatsPage.Examples     as Ex
+import           Control.Concurrent         (threadDelay)
+import           Control.Monad              (forever, (>=>), forM_)
+import           Flat
+import           Network.HTTP.Client.TLS    (newTlsManager)
+import           Servant.Client
 
 main :: IO ()
-main = do
-    pd <- getFunctionPostDataPoint
-    forever $ do
-        print =<< pd (DataPoint Ex.graphicsPage Ex.statPage Ex.physicsPage)
-        threadDelay 3000000
+main = let
+        lap = Lap [10, 20, 30] 60 True False False
+        se = FinishedLap lap []
+    in do
+        baseUrl <- parseBaseUrl "http://localhost:8000"
+        putStrLn $ showBaseUrl baseUrl
+        httpClientManager <- newTlsManager
+
+        let routes = accSessionRoutes httpClientManager baseUrl
+            postNewSession = _postNewSession routes
+            putNewEvent = _putNewEvent routes
+
+        forever $ do
+            sessionId <- postNewSession
+            putStrLn $ "Got Session ID " <> show sessionId
+            forM_ [0..10] $ \_ -> do
+                _ <- putNewEvent sessionId se
+                putStrLn "Sent LapEvent"
+                threadDelay 3000000
+            putNewEvent sessionId $ FinishedStint 10.0

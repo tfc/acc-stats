@@ -9,14 +9,15 @@ library
   default-language: Haskell2010
   exposed-modules:  Acc.Stats.Server
   hs-source-dirs:   src
-  ghc-options:      -Wall -Werror -fhide-source-paths
 
   if impl(ghc >=8.10)
     ghc-options: -Wunused-packages
+  ghc-options:      -Wall -fhide-source-paths
 
   build-depends:
     , acc-stats-api
     , acc-statspage
+    , acc-session-state
     , base
     , containers
     , servant-server
@@ -30,17 +31,13 @@ executable acc-stats-server
   default-language: Haskell2010
   main-is:          Main.hs
   build-depends:
-    , acc-stats-api
     , acc-stats-server
     , base
     , optparse-applicative
-    , servant-server
-    , wai
-    , wai-cors
     , warp
 
   hs-source-dirs:   app
-  ghc-options:      -Wall -Werror -fhide-source-paths
+  ghc-options:      -Wall -fhide-source-paths
 
   if impl(ghc >=8.10)
     ghc-options: -Wunused-packages
@@ -53,7 +50,7 @@ test-suite acc-logging-server-test
   type:             exitcode-stdio-1.0
   hs-source-dirs:   unit-test
   main-is:          Main.hs
-  ghc-options:      -Wall -Werror -fhide-source-paths
+  ghc-options:      -Wall -fhide-source-paths
 
   if impl(ghc >=8.10)
     ghc-options: -Wunused-packages

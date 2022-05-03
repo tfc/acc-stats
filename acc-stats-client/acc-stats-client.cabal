@@ -13,10 +13,12 @@ library
   exposed-modules:  Acc.Stats.Client
   build-depends:
     , acc-stats-api
+    , acc-session-state
     , base
     , http-client
     , servant
     , servant-client
+    , servant-client-core
 
   hs-source-dirs:   src
 
@@ -37,7 +39,6 @@ executable acc-stats-client
     buildable: False
 
   build-depends:
-    , acc-session-state
     , acc-stats-api
     , acc-stats-client
     , acc-statspage
@@ -47,7 +48,6 @@ executable acc-stats-client
     , http-client
     , http-types
     , mtl
-    , servant
     , servant-client
     , Win32
 
@@ -56,11 +56,17 @@ executable acc-stats-client-fake
   main-is:          Main.hs
   hs-source-dirs:   fake-app
   build-depends:
+    , acc-session-state
     , acc-stats-api
     , acc-stats-client
     , acc-statspage-examples
     , base
     , bytestring
+    , conduit
+    , flat
+    , http-client-tls
+    , network-conduit
+    , servant-client
 
   if impl(ghcjs)
     buildable: False

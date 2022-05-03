@@ -3,15 +3,11 @@
 module Acc.Stats.Client where
 
 import           Acc.Stats.API
-import           Data.Proxy          (Proxy (..))
-import           Network.HTTP.Client hiding (Proxy)
-import           Servant.API
+import           Control.Exception      (throwIO)
+import           Network.HTTP.Client    (Manager)
 import           Servant.Client
+import           Servant.Client.Generic
 
-getFunctionPostDataPoint :: IO (DataPoint -> IO (Either ClientError ()))
-getFunctionPostDataPoint = do
-    let (_ :<|> postDataPointRoute :<|> _) = client (Proxy :: Proxy AccStatsApi)
-    m <- newManager defaultManagerSettings
-    let clientEnv = mkClientEnv m (BaseUrl Http "acc.qssep.de" 80 "")
-        postDataPoint dp = runClientM (postDataPointRoute dp) clientEnv
-    return postDataPoint
+accSessionRoutes :: Manager -> BaseUrl -> SessionRoutes (AsClientT IO)
+accSessionRoutes mgr burl = genericClientHoist
+    (\x -> runClientM x (mkClientEnv mgr burl) >>= either throwIO return)
