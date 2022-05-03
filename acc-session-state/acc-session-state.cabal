@@ -19,6 +19,7 @@ library
     , acc-statspage
     , aeson
     , base
+    , flat
     , lens
     , mtl
     , vector

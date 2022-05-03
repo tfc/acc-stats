@@ -88,11 +88,6 @@ isFullLap lap = length (lap ^. sectorTimes) == 3
 swapState :: MonadState s m => s -> m s
 swapState s = get >>= (put s >>) . return
 
-data SessionEvent = FinishedSector Int
-                  | FinishedLap Lap [LapTelemetry]
-                  | FinishedStint Float
-                  deriving Show
-
 shiftGraphicsInput :: Monad m => GraphicsPage -> StateT StintState m ()
 shiftGraphicsInput nextGp = do
     lastGp <- gets (^. currentGraphics)
