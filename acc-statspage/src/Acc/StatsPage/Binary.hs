@@ -10,9 +10,13 @@ import qualified Data.Text.Encoding   as TE
 import           Data.Vector.Binary   (genericGetVectorWith)
 import           Data.Vector.Storable (Vector)
 
+decodeUtf16String :: BS.ByteString -> T.Text
+decodeUtf16String = T.takeWhile (/= '\0') . TE.decodeUtf16LEWith fe
+    where fe = \_ _ -> Just '!'
+
 getGraphicsPage :: Get GraphicsPage
 getGraphicsPage = let
-        utfString n = T.takeWhile (/= '\0') . TE.decodeUtf16LE
+        utfString n = decodeUtf16String
                   <$> getByteString (2 * n)
         cInt = fromIntegral <$> getWord32le
         floatVector :: Int -> Get (Vector Float)
