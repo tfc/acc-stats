@@ -15,14 +15,20 @@ import           System.IO.Error            (catchIOError)
 telemetryUser :: IO FullData -> IO ()
 telemetryUser readData = void $ execStateT f freshSession
     where f = forever $ do
-            FullData pg pp ps <- liftIO readData
-            if (_statPageAcVersion ps == "") ||(_graphicsPageStatus pg == 3)
-                then return ()
-                else do
-                    updateStintState pp pg >>= \case
-                        Nothing -> return ()
-                        Just s -> liftIO $ print s
+            fd@(FullData pg pp ps) <- liftIO readData
+            when (isRunningSession fd) $ do
+                updateStintState pp pg >>= \case
+                    Nothing -> return ()
+                    Just s -> do
+                        liftIO $ print s
+                        s <- get
+                        liftIO $ print $ _dataPoints $ _currentStint s
+
             liftIO $ threadDelay 100000
+
+isRunningSession :: FullData -> Bool
+isRunningSession (FullData pg _ ps) =
+    _statPageAcVersion ps /= "" && _graphicsPageStatus pg == 2
 
 main :: IO ()
 main = f
