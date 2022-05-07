@@ -7,7 +7,7 @@ import           Control.Lens.TH
 import           Data.Aeson
 import           Data.Text       (Text)
 import           GHC.Generics    (Generic)
-import qualified Data.Vector.Storable as V
+import qualified Data.Vector.Unboxed as V
 
 data GraphicsPage = GraphicsPage
     { _graphicsPagePacketId                 :: !Int

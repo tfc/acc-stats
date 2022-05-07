@@ -30,7 +30,7 @@ library
     , servant-server
     , time
 
-  if impl(ghcjs)
+  if impl(ghcjs) || os(windows)
     buildable: False
 
 executable acc-stats-server
@@ -50,7 +50,7 @@ executable acc-stats-server
   if impl(ghc >=8.10)
     ghc-options: -Wunused-packages
 
-  if impl(ghcjs)
+  if impl(ghcjs) || os(windows)
     buildable: False
 
 test-suite acc-logging-server-test
@@ -76,5 +76,5 @@ test-suite acc-logging-server-test
     , wai
     , warp
 
-  if impl(ghcjs)
+  if impl(ghcjs) || os(windows)
     buildable: False

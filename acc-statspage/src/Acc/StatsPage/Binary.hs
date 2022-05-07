@@ -8,7 +8,7 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text            as T
 import qualified Data.Text.Encoding   as TE
 import           Data.Vector.Binary   (genericGetVectorWith)
-import           Data.Vector.Storable (Vector)
+import           Data.Vector.Unboxed (Vector)
 
 decodeUtf16String :: BS.ByteString -> T.Text
 decodeUtf16String = T.takeWhile (/= '\0') . TE.decodeUtf16LEWith fe
