@@ -1,0 +1,36 @@
+CREATE TABLE stints (
+  stint_id serial PRIMARY KEY,
+  started_on TIMESTAMPTZ NOT NULL,
+  finished_on TIMESTAMPTZ,
+  distance_meters INT
+);
+
+CREATE TABLE laps (
+  lap_id serial PRIMARY KEY,
+  stint_id serial NOT NULL,
+  finished_on TIMESTAMPTZ NOT NULL,
+  valid BOOL NOT NULL,
+  inlap BOOL NOT NULL,
+  outlap BOOL NOT NULL,
+  sector1 INT NOT NULL,
+  sector2 INT NOT NULL,
+  sector3 INT NOT NULL,
+  CONSTRAINT fk_stint
+    FOREIGN KEY(stint_id)
+    REFERENCES stints(stint_id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE telemetry (
+  telemetry_id serial PRIMARY KEY,
+  stint_id serial NOT NULL,
+  timestamp TIMESTAMPTZ NOT NULL,
+  normpos float4 NOT NULL,
+  speed float4 NOT NULL,
+  gas float4 NOT NULL,
+  brake float4 NOT NULL,
+  CONSTRAINT fk_stint
+    FOREIGN KEY(stint_id)
+    REFERENCES stints(stint_id)
+    ON DELETE CASCADE
+);

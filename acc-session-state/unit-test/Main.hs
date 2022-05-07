@@ -5,6 +5,7 @@
 {-# LANGUAGE TypeFamilies      #-}
 
 import           Acc.Session.State
+import           Acc.Session.DataStructures
 import           Acc.StatsPage
 import           Control.Lens.Operators
 import           Control.Monad              (forM)

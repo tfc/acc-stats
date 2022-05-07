@@ -1,10 +1,25 @@
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Main where
 
+import           Acc.Stats.Migrations
 import           Acc.Stats.Server
+import           Control.Exception        (Exception, bracket, throwIO)
+import           Data.ByteString          (ByteString)
+import qualified Hasql.Connection         as Hasql
 import           Network.Wai.Handler.Warp
 import           Options.Applicative
+
+instance Exception Hasql.ConnectionError
+
+withConnection :: ByteString -> (Hasql.Connection -> IO a) -> IO a
+withConnection connectionString =
+    bracket (Hasql.acquire connectionString >>= either throwIO return)
+            Hasql.release
+
 
 data Config = Config
   { configPort :: Int
@@ -34,5 +49,7 @@ opts = info (configParser <**> helper)
 main :: IO ()
 main = do
     config <- execParser opts
-    putStrLn $ "Serving on port " <> show (configPort config)
-    run (configPort config) serverApp
+    withConnection "" $ \dbConnection -> do
+        runMigrations dbConnection
+        putStrLn $ "Serving on port " <> show (configPort config)
+        run (configPort config) (serverApp $ AppCtx dbConnection)

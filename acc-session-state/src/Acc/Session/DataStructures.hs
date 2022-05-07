@@ -4,6 +4,7 @@
 module Acc.Session.DataStructures where
 
 import           Control.Lens.TH
+import           Data.Time
 import           Flat
 import           GHC.Generics
 
