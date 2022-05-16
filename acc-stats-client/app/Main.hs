@@ -58,7 +58,7 @@ telemetryUser readData = do
                         writeIORef sessionIdVar Nothing
                     x -> liftIO $ print x
 
-            liftIO $ threadDelay 1000000
+            liftIO $ threadDelay (10^6 `div` 1000 :: Int) -- ~100 data points per second
 
 isRunningSession :: FullData -> Bool
 isRunningSession (FullData pg _ ps) =

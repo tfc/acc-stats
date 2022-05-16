@@ -19,10 +19,15 @@ data Lap = Lap
 makeLenses ''Lap
 
 data LapTelemetry = LapTelemetry
-    { _telNormPosition :: !Float
-    , _telSpeed        :: !Float
-    , _telGas          :: !Float
-    , _telBrake        :: !Float
+    { _telNormPosition   :: !Float
+    , _telGas            :: !Float
+    , _telBrake          :: !Float
+    , _telGear           :: !Int
+    , _telRpms           :: !Int
+    , _telSpeed          :: !Float
+    , _telSteerAngle     :: !Float
+    , _telWheelPressures :: ![Float]
+    , _telWheelTemps     :: ![Float]
     } deriving (Flat, Generic, Show)
 
 makeLenses ''LapTelemetry

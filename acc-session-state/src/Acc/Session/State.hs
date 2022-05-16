@@ -10,6 +10,7 @@ import           Control.Lens.Operators
 import           Control.Monad.State.Strict
 import           Data.Maybe                 (catMaybes)
 import           GHC.Generics
+import qualified Data.Vector.Unboxed as V
 
 freshLap = Lap
     { _sectorTimes = []
@@ -25,6 +26,7 @@ data StintState = StintState
     , _currentLap      :: !Lap
     , _lapTelemetry    :: ![LapTelemetry]
     , _currentSector   :: !Int
+    , _lastTelemDistance :: !Float
     } deriving (Generic, Show)
 
 makeLenses ''StintState
@@ -36,6 +38,7 @@ freshStintState oldGp newGp = StintState
     , _currentLap = freshLap
     , _lapTelemetry = []
     , _currentSector = 0
+    , _lastTelemDistance = 0.0
     }
 
 data Event = NextStint
@@ -94,13 +97,26 @@ shiftGraphicsInput nextGp = do
     modify $ (& lastGraphics .~ lastGp)
            . (& currentGraphics .~ nextGp)
 
+currentLapTelemetry :: Float -> PhysicsPage -> LapTelemetry
+currentLapTelemetry pos p = LapTelemetry
+    { _telNormPosition = pos
+    , _telGas = _physicsPageGas p
+    , _telBrake = _physicsPageBrake p
+    , _telGear = _physicsPageGear p
+    , _telRpms = _physicsPageRpms p
+    , _telSpeed = _physicsPageSpeedKmh p
+    , _telSteerAngle = _physicsPageSteerAngle p
+    , _telWheelPressures = V.toList $ _physicsPageWheelsPressure p
+    , _telWheelTemps = V.toList $ _physicsPageTyreCoreTemperature p
+    }
+
 updateTelemetry :: Monad m => PhysicsPage -> StateT StintState m ()
 updateTelemetry pp = do
     let speed = pp ^. physicsPageSpeedKmh
         gas = pp ^. physicsPageGas
         brake = pp ^. physicsPageBrake
     pos <- gets (^. currentGraphics . graphicsPageNormalizedCarPosition)
-    modify (& lapTelemetry %~ (LapTelemetry pos speed gas brake:))
+    modify (& lapTelemetry %~ (currentLapTelemetry pos pp:))
 
 updateStint :: Monad m
           => GraphicsPage
@@ -111,7 +127,14 @@ updateStint nextGp pp = do
     let events = eventsFromData lastGp nextGp
     shiftGraphicsInput nextGp
     rets <- catMaybes <$> mapM updateState events
-    updateTelemetry pp
+
+    -- only update telemetry after traveling at least 5m
+    let currentDist = nextGp ^. graphicsPageDistanceTraveled
+    lastDist <- gets (^. lastTelemDistance)
+    when (currentDist - lastDist > 5.0) $ do
+        updateTelemetry pp
+        modify (& lastTelemDistance .~ currentDist)
+
     return rets
 
 updateState :: Monad m
