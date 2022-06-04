@@ -17,7 +17,7 @@ runTx con = flip run con . Tx.transaction Tx.ReadCommitted Tx.Write
 
 runMigrations :: Connection -> IO ()
 runMigrations con = do
-    _ <- runTx con (Tx.sql "DROP OWNED BY tfc;")
+    --_ <- runTx con (Tx.sql "DROP OWNED BY tfc;")
     runTx con (runMigration $ MigrationInitialization) >>= print
     migrationScripts <- loadMigrationsFromDirectory "migration-scripts"
     forM_ migrationScripts $ \m@(MigrationScript name script) -> do
