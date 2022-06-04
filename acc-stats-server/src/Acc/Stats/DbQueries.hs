@@ -8,6 +8,7 @@ import           Data.Time                  (UTCTime)
 import qualified Hasql.Session              as Session
 import           Hasql.Statement            (Statement (..))
 import qualified Hasql.TH                   as TH
+import           Timestamp                  (timestampUtcTime)
 
 insertStintStatement :: Statement () Int32
 insertStintStatement = [TH.singletonStatement|
@@ -19,8 +20,8 @@ insertStintStatement = [TH.singletonStatement|
 insertStint :: Session.Session Int32
 insertStint = Session.statement () insertStintStatement
 
-insertLapStatement :: Statement (Int32, UTCTime, Bool, Bool, Bool, Int32, Int32, Int32) ()
-insertLapStatement = [TH.resultlessStatement|
+insertLapStatement :: Statement (Int32, UTCTime, Bool, Bool, Bool, Int32, Int32, Int32) Int32
+insertLapStatement = [TH.singletonStatement|
     INSERT INTO laps ( stint_id
                      , finished_on
                      , valid
@@ -39,9 +40,10 @@ insertLapStatement = [TH.resultlessStatement|
            , $7 :: int4
            , $8 :: int4
            )
+    RETURNING lap_id :: int4
     |]
 
-insertLap :: Int32 -> UTCTime -> Lap -> Session.Session ()
+insertLap :: Int32 -> UTCTime -> Lap -> Session.Session Int32
 insertLap sid time l = let
     [s1, s2, s3] = fromIntegral <$> _sectorTimes l
     in
@@ -49,7 +51,7 @@ insertLap sid time l = let
 
 insertTelemetryStatement :: Statement (Int32, UTCTime, Float, Float, Float, Int32, Int32, Float, Float, Float, Float, Float, Float, Float, Float, Float, Float) ()
 insertTelemetryStatement = [TH.resultlessStatement|
-    INSERT INTO telemetry ( stint_id
+    INSERT INTO telemetry ( lap_id
                           , timestamp
                           , normpos
                           , gas
@@ -93,7 +95,7 @@ insertTelemetryStatement = [TH.resultlessStatement|
 insertTelemetry :: Int32 -> LapTelemetry -> Session.Session ()
 insertTelemetry lapId t =
     Session.statement ( lapId
-                      , _telTimestamp t
+                      , timestampUtcTime $ _telTimestamp t
                       , _telNormPosition t
                       , _telGas t
                       , _telBrake t

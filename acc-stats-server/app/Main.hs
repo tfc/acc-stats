@@ -37,7 +37,7 @@ configParser = Config
       <*> optional (strOption
           ( long "static-path"
          <> metavar "STATIC PATH"
-         <> help "Path for static content like client zip file and web UI. Omitting disables CORS."
+         <> help "Path for static content like client zip file and web UI."
           ))
 
 opts :: ParserInfo Config

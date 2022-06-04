@@ -29,6 +29,7 @@ library
     , mtl
     , servant-server
     , time
+    , timestamp
 
   if impl(ghcjs) || os(windows)
     buildable: False

@@ -38,8 +38,8 @@ putNewEvent sid (FinishedLap lap tm) = let
     in do
     now <- liftIO $ getCurrentTime
     x <- runSqlSession $ do
-        insertLap sessionId now lap
-        mapM_ (insertTelemetry sessionId) tm
+        lapId <- insertLap sessionId now lap
+        mapM_ (insertTelemetry lapId) tm
     liftIO $ print x
 putNewEvent _ _ = pure ()
 
