@@ -116,7 +116,8 @@ updateTelemetry pp = do
         gas = pp ^. physicsPageGas
         brake = pp ^. physicsPageBrake
     pos <- gets (^. currentGraphics . graphicsPageNormalizedCarPosition)
-    modify (& lapTelemetry %~ (currentLapTelemetry pos pp:))
+    let !telemetryPoint = currentLapTelemetry pos pp
+    modify (& lapTelemetry %~ (telemetryPoint:))
 
 updateStint :: Monad m
           => GraphicsPage
