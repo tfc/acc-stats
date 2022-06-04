@@ -37,7 +37,7 @@ freshStintState oldGp newGp = StintState
     , _currentGraphics = newGp
     , _currentLap = freshLap
     , _lapTelemetry = []
-    , _currentSector = 0
+    , _currentSector = -1
     , _lastTelemDistance = 0.0
     }
 
