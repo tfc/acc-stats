@@ -24,7 +24,7 @@ CREATE TABLE laps (
 
 CREATE TABLE telemetry (
   telemetry_id serial      PRIMARY KEY,
-  stint_id     serial      NOT NULL,
+  lap_id       serial      NOT NULL,
   timestamp    TIMESTAMPTZ NOT NULL,
 
   normpos     float4 NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE telemetry (
   wheel_temperature_rr float4 NOT NULL,
 
   CONSTRAINT fk_stint
-    FOREIGN KEY(stint_id)
-    REFERENCES stints(stint_id)
+    FOREIGN KEY(lap_id)
+    REFERENCES laps(lap_id)
     ON DELETE CASCADE
 );

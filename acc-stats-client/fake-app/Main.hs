@@ -16,7 +16,7 @@ main :: IO ()
 main = let
         lap = Lap [10, 20, 30] 60 True False False
         te = LapTelemetry (Timestamp 0) 0 0 0 0 0 0.0 0.0 [] []
-        se = FinishedLap lap $ take 2000 $ repeat te
+        se = FinishedLap lap $ replicate 2000 te
     in do
         baseUrl <- parseBaseUrl "http://localhost:8000"
         putStrLn $ showBaseUrl baseUrl

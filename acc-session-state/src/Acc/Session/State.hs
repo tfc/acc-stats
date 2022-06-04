@@ -119,7 +119,7 @@ updateTelemetry pp = do
         gas = pp ^. physicsPageGas
         brake = pp ^. physicsPageBrake
     pos <- gets (^. currentGraphics . graphicsPageNormalizedCarPosition)
-    now <- liftIO $ getCurrentTime
+    now <- liftIO getCurrentTime
     let !telemetryPoint = currentLapTelemetry (utcTimeTimestamp now) pos pp
     modify (& lapTelemetry %~ (telemetryPoint:))
 

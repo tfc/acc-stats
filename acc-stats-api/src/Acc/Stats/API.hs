@@ -4,13 +4,12 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeOperators         #-}
 module Acc.Stats.API where
 
 import           Acc.Session.DataStructures
 import           Data.Aeson
-import           Data.Bifunctor             (bimap)
+import           Data.Bifunctor             (first)
 import           Data.ByteString.Lazy       (fromStrict)
 import           Data.Proxy
 import           Data.Text                  (Text)
@@ -58,7 +57,7 @@ instance Flat a => MimeRender FlatContentType a where
     mimeRender _ = fromStrict . flat
 
 instance Flat a => MimeUnrender FlatContentType a where
-    mimeUnrender _ = bimap show id . unflat
+    mimeUnrender _ = first show . unflat
 
 data SessionRoutes route = SessionRoutes
     { _postNewSession :: route :- Post '[JSON] Int

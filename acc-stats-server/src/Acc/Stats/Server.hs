@@ -14,13 +14,13 @@ import           Servant.Server.Generic
 
 type AppM = ReaderT AppCtx Handler
 
-data AppCtx = AppCtx
+newtype AppCtx = AppCtx
     { _getDbConnection :: Connection
     }
 
 runSqlSession :: Session a -> AppM a
 runSqlSession s = do
-    connection <- _getDbConnection <$> ask
+    connection <- asks _getDbConnection
     liftIO (either throwIO return =<< run s connection)
 
 record :: SessionRoutes (AsServerT AppM)
@@ -36,7 +36,7 @@ putNewEvent :: Int -> SessionEvent -> AppM ()
 putNewEvent sid (FinishedLap lap tm) = let
         sessionId = fromIntegral sid
     in do
-    now <- liftIO $ getCurrentTime
+    now <- liftIO getCurrentTime
     x <- runSqlSession $ do
         lapId <- insertLap sessionId now lap
         mapM_ (insertTelemetry lapId) tm
@@ -44,4 +44,4 @@ putNewEvent sid (FinishedLap lap tm) = let
 putNewEvent _ _ = pure ()
 
 serverApp :: AppCtx -> Application
-serverApp appCtx = genericServeT (flip runReaderT appCtx) record
+serverApp appCtx = genericServeT (`runReaderT` appCtx) record

@@ -94,6 +94,10 @@ insertTelemetryStatement = [TH.resultlessStatement|
 
 insertTelemetry :: Int32 -> LapTelemetry -> Session.Session ()
 insertTelemetry lapId t =
+    let
+        [p1, p2, p3, p4] = _telWheelPressures t
+        [t1, t2, t3, t4] = _telWheelTemps t
+    in
     Session.statement ( lapId
                       , timestampUtcTime $ _telTimestamp t
                       , _telNormPosition t
@@ -103,12 +107,6 @@ insertTelemetry lapId t =
                       , fromIntegral $ _telRpms t
                       , _telSpeed t
                       , _telSteerAngle t
-                      , _telWheelPressures t !! 0
-                      , _telWheelPressures t !! 1
-                      , _telWheelPressures t !! 2
-                      , _telWheelPressures t !! 3
-                      , _telWheelTemps t !! 0
-                      , _telWheelTemps t !! 1
-                      , _telWheelTemps t !! 2
-                      , _telWheelTemps t !! 3
+                      , p1, p2, p3, p4
+                      , t1, t2, t3, t4
                       ) insertTelemetryStatement

@@ -1,6 +1,4 @@
 {-# LANGUAGE OverloadedStrings    #-}
-{-# LANGUAGE TypeOperators        #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Main where

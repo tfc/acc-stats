@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
@@ -45,7 +44,7 @@ telemetryUser readData = do
             when (isRunningSession fd) $ do
                 liftIO $ do
                     sid' <- readIORef sessionIdVar
-                    when (Nothing == sid') $ do
+                    when (isNothing sid') $ do
                         putStrLn "Requesting new session id..."
                         newId <- postNewSession
                         writeIORef sessionIdVar $ Just newId
