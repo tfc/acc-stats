@@ -90,10 +90,10 @@ insertTelemetryStatement = [TH.resultlessStatement|
            )
     |]
 
-insertTelemetry :: Int32 -> UTCTime -> LapTelemetry -> Session.Session ()
-insertTelemetry sid time t =
-    Session.statement ( sid
-                      , time
+insertTelemetry :: Int32 -> LapTelemetry -> Session.Session ()
+insertTelemetry lapId t =
+    Session.statement ( lapId
+                      , _telTimestamp t
                       , _telNormPosition t
                       , _telGas t
                       , _telBrake t

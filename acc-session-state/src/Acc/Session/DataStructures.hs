@@ -7,6 +7,9 @@ import           Control.Lens.TH
 import           Data.Time
 import           Flat
 import           GHC.Generics
+import           Timestamp
+
+instance Flat Timestamp
 
 data Lap = Lap
     { _sectorTimes :: ![Int]
@@ -19,7 +22,8 @@ data Lap = Lap
 makeLenses ''Lap
 
 data LapTelemetry = LapTelemetry
-    { _telNormPosition   :: !Float
+    { _telTimestamp      :: Timestamp
+    , _telNormPosition   :: !Float
     , _telGas            :: !Float
     , _telBrake          :: !Float
     , _telGear           :: !Int

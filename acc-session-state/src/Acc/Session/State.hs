@@ -9,8 +9,10 @@ import           Control.Lens.Combinators
 import           Control.Lens.Operators
 import           Control.Monad.State.Strict
 import           Data.Maybe                 (catMaybes)
+import           Data.Time                  (getCurrentTime)
+import qualified Data.Vector.Unboxed        as V
 import           GHC.Generics
-import qualified Data.Vector.Unboxed as V
+import           Timestamp                  (Timestamp, utcTimeTimestamp)
 
 freshLap = Lap
     { _sectorTimes = []
@@ -97,9 +99,10 @@ shiftGraphicsInput nextGp = do
     modify $ (& lastGraphics .~ lastGp)
            . (& currentGraphics .~ nextGp)
 
-currentLapTelemetry :: Float -> PhysicsPage -> LapTelemetry
-currentLapTelemetry pos p = LapTelemetry
-    { _telNormPosition = pos
+currentLapTelemetry :: Timestamp -> Float -> PhysicsPage -> LapTelemetry
+currentLapTelemetry ts pos p = LapTelemetry
+    { _telTimestamp = ts
+    , _telNormPosition = pos
     , _telGas = _physicsPageGas p
     , _telBrake = _physicsPageBrake p
     , _telGear = _physicsPageGear p
@@ -110,16 +113,17 @@ currentLapTelemetry pos p = LapTelemetry
     , _telWheelTemps = V.toList $ _physicsPageTyreCoreTemperature p
     }
 
-updateTelemetry :: Monad m => PhysicsPage -> StateT StintState m ()
+updateTelemetry :: MonadIO m => PhysicsPage -> StateT StintState m ()
 updateTelemetry pp = do
     let speed = pp ^. physicsPageSpeedKmh
         gas = pp ^. physicsPageGas
         brake = pp ^. physicsPageBrake
     pos <- gets (^. currentGraphics . graphicsPageNormalizedCarPosition)
-    let !telemetryPoint = currentLapTelemetry pos pp
+    now <- liftIO $ getCurrentTime
+    let !telemetryPoint = currentLapTelemetry (utcTimeTimestamp now) pos pp
     modify (& lapTelemetry %~ (telemetryPoint:))
 
-updateStint :: Monad m
+updateStint :: MonadIO m
           => GraphicsPage
           -> PhysicsPage
           -> StateT StintState m [SessionEvent]
