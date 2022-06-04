@@ -22,9 +22,9 @@ library
     , flat
     , lens
     , mtl
-    , vector
     , time
     , timestamp
+    , vector
 
 test-suite acc-session-state-test
   default-language: Haskell2010
