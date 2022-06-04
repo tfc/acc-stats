@@ -33,9 +33,14 @@ postNewSession :: AppM Int
 postNewSession = fromIntegral <$> runSqlSession insertStint
 
 putNewEvent :: Int -> SessionEvent -> AppM ()
-putNewEvent sessionId (FinishedLap lap _) = do
+putNewEvent sid (FinishedLap lap tm) = let
+        sessionId = fromIntegral sid
+    in do
     now <- liftIO $ getCurrentTime
-    runSqlSession $ insertLap (fromIntegral sessionId) now lap
+    x <- runSqlSession $ do
+        insertLap sessionId now lap
+        mapM_ (insertTelemetry sessionId now) tm
+    liftIO $ print x
 putNewEvent _ _ = pure ()
 
 serverApp :: AppCtx -> Application

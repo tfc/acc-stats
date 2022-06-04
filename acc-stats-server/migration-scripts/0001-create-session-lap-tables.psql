@@ -1,20 +1,21 @@
 CREATE TABLE stints (
-  stint_id serial PRIMARY KEY,
-  started_on TIMESTAMPTZ NOT NULL,
-  finished_on TIMESTAMPTZ,
+  stint_id        serial      PRIMARY KEY,
+  started_on      TIMESTAMPTZ NOT NULL,
+  finished_on     TIMESTAMPTZ,
   distance_meters INT
 );
 
 CREATE TABLE laps (
-  lap_id serial PRIMARY KEY,
-  stint_id serial NOT NULL,
+  lap_id      serial      PRIMARY KEY,
+  stint_id    serial      NOT NULL,
   finished_on TIMESTAMPTZ NOT NULL,
-  valid BOOL NOT NULL,
-  inlap BOOL NOT NULL,
-  outlap BOOL NOT NULL,
-  sector1 INT NOT NULL,
-  sector2 INT NOT NULL,
-  sector3 INT NOT NULL,
+  valid       BOOL        NOT NULL,
+  inlap       BOOL        NOT NULL,
+  outlap      BOOL        NOT NULL,
+  sector1     INT         NOT NULL,
+  sector2     INT         NOT NULL,
+  sector3     INT         NOT NULL,
+
   CONSTRAINT fk_stint
     FOREIGN KEY(stint_id)
     REFERENCES stints(stint_id)
@@ -22,13 +23,28 @@ CREATE TABLE laps (
 );
 
 CREATE TABLE telemetry (
-  telemetry_id serial PRIMARY KEY,
-  stint_id serial NOT NULL,
-  timestamp TIMESTAMPTZ NOT NULL,
-  normpos float4 NOT NULL,
-  speed float4 NOT NULL,
-  gas float4 NOT NULL,
-  brake float4 NOT NULL,
+  telemetry_id serial      PRIMARY KEY,
+  stint_id     serial      NOT NULL,
+  timestamp    TIMESTAMPTZ NOT NULL,
+
+  normpos     float4 NOT NULL,
+  gas         float4 NOT NULL,
+  brake       float4 NOT NULL,
+  gear        INT    NOT NULL,
+  rpms        INT    NOT NULL,
+  speed       float4 NOT NULL,
+  steer_angle float4 NOT NULL,
+
+  wheel_pressure_fl float4 NOT NULL,
+  wheel_pressure_fr float4 NOT NULL,
+  wheel_pressure_rl float4 NOT NULL,
+  wheel_pressure_rr float4 NOT NULL,
+
+  wheel_temperature_fl float4 NOT NULL,
+  wheel_temperature_fr float4 NOT NULL,
+  wheel_temperature_rl float4 NOT NULL,
+  wheel_temperature_rr float4 NOT NULL,
+
   CONSTRAINT fk_stint
     FOREIGN KEY(stint_id)
     REFERENCES stints(stint_id)
