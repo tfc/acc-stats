@@ -50,6 +50,7 @@ executable acc-stats-client
     , http-types
     , mtl
     , servant-client
+    , flat
 
 executable acc-stats-client-fake
   default-language: Haskell2010

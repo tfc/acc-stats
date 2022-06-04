@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
@@ -17,6 +18,9 @@ import           Network.HTTP.Client.TLS    (newTlsManager)
 import           Servant.Client
 import           System.IO.Error            (catchIOError)
 import Data.IORef
+import Control.Exception
+import Flat
+import qualified Data.ByteString as BS
 
 telemetryUser :: IO FullData -> IO ()
 telemetryUser readData = do
@@ -50,8 +54,8 @@ telemetryUser readData = do
                 events <- updateStint pg pp
                 forM_ events $ \case
                     FinishedSector n -> liftIO $ putStrLn $ "finished sector " <> show n
-                    fle@(FinishedLap _ _) -> liftIO $ do
-                        putStrLn "posting new lap"
+                    fle@(FinishedLap _ te) -> liftIO $ do
+                        putStrLn $ "posting new lap, " <> show (length te) <> " telemetry points take " <> show (BS.length $ flat te) <> " bytes"
                         putNewEvent sid fle
                     FinishedStint _ -> liftIO $ do
                         putStrLn "finished stint"
