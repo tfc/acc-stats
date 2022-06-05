@@ -4,22 +4,23 @@
 
 module Main where
 
-import           Acc.Session.State
 import           Acc.Session.DataStructures
+import           Acc.Session.State
 import           Acc.Stats.API
 import           Acc.Stats.Client
 import           Acc.StatsPage
 import           AccMapping
 import           Control.Concurrent         (threadDelay)
+import           Control.Exception
 import           Control.Monad              (void)
 import           Control.Monad.State.Strict
+import qualified Data.ByteString            as BS
+import           Data.IORef
+import           Data.Maybe
+import           Flat
 import           Network.HTTP.Client.TLS    (newTlsManager)
 import           Servant.Client
 import           System.IO.Error            (catchIOError)
-import Data.IORef
-import Control.Exception
-import Flat
-import qualified Data.ByteString as BS
 
 telemetryUser :: IO FullData -> IO ()
 telemetryUser readData = do
