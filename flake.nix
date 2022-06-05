@@ -17,7 +17,7 @@
           acc-stats =
             final.haskell-nix.project' {
               src = filteredSrc final;
-              compiler-nix-name = "ghc8107";
+              compiler-nix-name = "ghc902";
               shell.tools = {
                 haskell-language-server = { };
               };
