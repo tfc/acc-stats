@@ -45,9 +45,9 @@
         windowsFlake = windowsPkgs.acc-stats.flake { };
       in
       pkgs.lib.recursiveUpdate flake {
-        defaultPackage = flake.packages."acc-stats-server:exe:acc-stats-server";
 
         packages = {
+          default = flake.packages."acc-stats-server:exe:acc-stats-server";
           acc-stats-client-windows =
             windowsFlake.packages."acc-stats-client:exe:acc-stats-client";
         };
