@@ -4,12 +4,18 @@
 module Acc.Session.DataStructures where
 
 import           Control.Lens.TH
+import           Data.Text       (Text)
 import           Data.Time
 import           Flat
 import           GHC.Generics
 import           Timestamp
 
 instance Flat Timestamp
+
+data StintInfo = StintInfo
+    { _stintInfoTrack :: Text
+    , _stintInfoCar :: Text
+    } deriving (Eq, Flat, Generic, Show)
 
 data Lap = Lap
     { _sectorTimes :: ![Int]

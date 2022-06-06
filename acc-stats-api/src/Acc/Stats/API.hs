@@ -60,7 +60,8 @@ instance Flat a => MimeUnrender FlatContentType a where
     mimeUnrender _ = first show . unflat
 
 data SessionRoutes route = SessionRoutes
-    { _postNewSession :: route :- Post '[JSON] Int
+    { _postNewSession :: route :- ReqBody '[FlatContentType] StintInfo
+                               :> Post '[JSON] Int
     , _putNewEvent :: route :- Capture "id" Int
                             :> ReqBody '[FlatContentType] SessionEvent
                             :> Put '[JSON] ()

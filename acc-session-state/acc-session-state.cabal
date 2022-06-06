@@ -22,6 +22,7 @@ library
     , flat
     , lens
     , mtl
+    , text
     , time
     , timestamp
     , vector

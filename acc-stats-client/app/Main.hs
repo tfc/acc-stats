@@ -38,14 +38,14 @@ telemetryUser readData = do
             putNewEvent = _putNewEvent routes
         sessionIdVar <- liftIO (newIORef Nothing :: IO (IORef (Maybe Int)))
         forever $ do
-            fd@(FullData pg pp _) <- liftIO readData
+            fd@(FullData pg pp ps) <- liftIO readData
 
             when (isRunningSession fd) $ do
                 liftIO $ do
                     sid' <- readIORef sessionIdVar
                     when (isNothing sid') $ do
                         putStrLn "Requesting new session id..."
-                        newId <- postNewSession
+                        newId <- postNewSession $ StintInfo (_statPageTrack ps) (_statPageCarModel ps)
                         writeIORef sessionIdVar $ Just newId
                         putStrLn $ "new id is" <> show newId
                 Just sid <- liftIO $ readIORef sessionIdVar
