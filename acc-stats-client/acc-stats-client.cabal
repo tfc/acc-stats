@@ -42,12 +42,9 @@ executable acc-stats-client
     , acc-stats-client
     , acc-statspage
     , base
-    , binary
     , bytestring
     , flat
-    , http-client
     , http-client-tls
-    , http-types
     , mtl
     , servant-client
     , Win32

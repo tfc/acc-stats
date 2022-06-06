@@ -11,15 +11,13 @@ import           Acc.Stats.Client
 import           Acc.StatsPage
 import           AccMapping
 import           Control.Concurrent         (threadDelay)
-import           Control.Exception
-import           Control.Monad              (void)
 import           Control.Monad.State.Strict
 import qualified Data.ByteString            as BS
 import           Data.IORef
 import           Data.Maybe
 import           Flat
 import           Network.HTTP.Client.TLS    (newTlsManager)
-import           Servant.Client
+import           Servant.Client             hiding (baseUrl)
 import           System.IO.Error            (catchIOError)
 
 telemetryUser :: IO FullData -> IO ()
