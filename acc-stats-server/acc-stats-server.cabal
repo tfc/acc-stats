@@ -29,6 +29,7 @@ library
     , hasql-transaction
     , mtl
     , servant-server
+    , text
     , time
     , timestamp
 

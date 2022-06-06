@@ -29,8 +29,8 @@ record = SessionRoutes
     , _putNewEvent = putNewEvent
     }
 
-postNewSession :: AppM Int
-postNewSession = fromIntegral <$> runSqlSession insertStint
+postNewSession :: StintInfo -> AppM Int
+postNewSession si = fromIntegral <$> runSqlSession (insertStint si)
 
 putNewEvent :: Int -> SessionEvent -> AppM ()
 putNewEvent sid (FinishedLap lap tm) = let

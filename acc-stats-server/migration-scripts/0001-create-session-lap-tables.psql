@@ -1,8 +1,8 @@
 CREATE TABLE stints (
   stint_id        serial      PRIMARY KEY,
   started_on      TIMESTAMPTZ NOT NULL,
-  finished_on     TIMESTAMPTZ,
-  distance_meters INT
+  track           TEXT NOT NULL,
+  car_model       TEXT NOT NULL
 );
 
 CREATE TABLE laps (

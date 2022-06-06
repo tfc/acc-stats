@@ -4,21 +4,25 @@ module Acc.Stats.DbQueries where
 
 import           Acc.Session.DataStructures
 import           Data.Int                   (Int32)
+import           Data.Text                  (Text)
 import           Data.Time                  (UTCTime)
 import qualified Hasql.Session              as Session
 import           Hasql.Statement            (Statement (..))
 import qualified Hasql.TH                   as TH
 import           Timestamp                  (timestampUtcTime)
 
-insertStintStatement :: Statement () Int32
+insertStintStatement :: Statement (Text, Text) Int32
 insertStintStatement = [TH.singletonStatement|
-    INSERT INTO stints (started_on)
-    VALUES (now())
+    INSERT INTO stints (started_on, track, car_model)
+    VALUES ( now()
+           , $1 :: text
+           , $2 :: text
+           )
     RETURNING stint_id :: int4
     |]
 
-insertStint :: Session.Session Int32
-insertStint = Session.statement () insertStintStatement
+insertStint :: StintInfo -> Session.Session Int32
+insertStint si = Session.statement (_stintInfoTrack si, _stintInfoCar si) insertStintStatement
 
 insertLapStatement :: Statement (Int32, UTCTime, Bool, Bool, Bool, Int32, Int32, Int32) Int32
 insertLapStatement = [TH.singletonStatement|
