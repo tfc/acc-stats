@@ -56,28 +56,26 @@ data Event = NextStint
 -- happen at the same time. In what order to handle them is then a matter of
 -- definitions.
 eventsFromData :: GraphicsPage -> GraphicsPage -> [Event]
-eventsFromData last next = mconcat $ map f eventFunctions
+eventsFromData last next = mconcat $ map (\f -> f last next)
+        [ pitLaneEntry
+        , pitLaneExit
+        , sectorInvalidated
+        , nextLapOrSector
+        , nextStint
+        ]
     where
-      f (condition, result) = [result | condition next last]
       isInPitlane = (/= 0) . (^. graphicsPageIsInPitLane)
       isValid = (/= 0) . (^. graphicsPageIsValidLap)
-      eventFunctions =
-        [ ((. (not . isInPitlane)) . (&&) . isInPitlane
-          , PitlaneEntry)
-        , ((. isInPitlane) . (&&) . (not . isInPitlane)
-          , PitlaneExit)
-        , ((. (^. graphicsPageCurrentSectorIndex) ) .
-            (<) . (^. graphicsPageCurrentSectorIndex)
-          , NextLap)
-        , ((. (^. graphicsPageCurrentSectorIndex) ) .
-            (>) . (^. graphicsPageCurrentSectorIndex)
-          , NextSector)
-        , ((. (^. graphicsPageDistanceTraveled) ) .
-            (<) . (^. graphicsPageDistanceTraveled)
-          , NextStint)
-        , ((. isValid) . (&&) . (not . isValid)
-          , SectorInvalidated)
-        ]
+
+      pitLaneEntry a b = [PitlaneEntry | not (isInPitlane a) && isInPitlane b]
+      pitLaneExit a b = [PitlaneExit | isInPitlane a && not (isInPitlane b)]
+      -- currentSectorIndex is not up2date if driver teleported into pit and then continues driving
+      -- so let's check the sector time change first and then see if we're entering a new lap or not
+      nextLapOrSector a b = if  a ^. graphicsPageLastSectorTime /= b ^. graphicsPageLastSectorTime
+                                then if b ^. graphicsPageCurrentSectorIndex == 0 then [NextLap] else [NextSector]
+                                else []
+      nextStint a b = [NextStint | _graphicsPageDistanceTraveled a > _graphicsPageDistanceTraveled b]
+      sectorInvalidated a b = [SectorInvalidated | isValid a && not (isValid b)]
 
 finalizeLap :: Int -> Lap -> Lap
 finalizeLap lastTime lap = let
