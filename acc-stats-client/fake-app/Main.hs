@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import           Acc.Session.DataStructures
@@ -27,7 +29,7 @@ main = let
             putNewEvent = _putNewEvent routes
 
         forever $ do
-            sessionId <- postNewSession
+            sessionId <- postNewSession (StintInfo "" "")
             putStrLn $ "Got Session ID " <> show sessionId
             forM_ [0..10] $ \_ -> do
                 _ <- putNewEvent sessionId se
